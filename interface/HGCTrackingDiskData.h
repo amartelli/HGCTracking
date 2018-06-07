@@ -44,6 +44,8 @@ class HGCTrackingDiskData {
 
         // for debugging
         void setTruth(const CaloTruthRevMap *truth) const { truthMap_ = truth; }
+        void setTruthBis(const std::map<uint32_t, float > *truthX, const std::map<uint32_t, float > *truthY, const std::map<uint32_t, float > *truthZ) const {
+	  truthMapX_ = truthX; truthMapY_ = truthY; truthMapZ_ = truthZ;}
 
     private:
         const edm::Handle<TColl> *alldata_;
@@ -56,8 +58,11 @@ class HGCTrackingDiskData {
 
         // for debugging
         mutable const CaloTruthRevMap *truthMap_;
+        mutable const std::map<uint32_t, float > *truthMapX_;
+        mutable const std::map<uint32_t, float > *truthMapY_;
+        mutable const std::map<uint32_t, float > *truthMapZ_;
 
-        void buildIndex_() {
+	void buildIndex_() {
             // could do some sorting here
         }
     

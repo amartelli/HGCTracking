@@ -15,6 +15,12 @@ class HGCDiskGeomDet : public GeomDet {
         int zside() const { return zside_; }
         int layer() const { return layer_; }
 
+	int progressiveLayer() const {
+	  int offset = (subdet_ > 3) ? 28 : 0;
+	  offset += (subdet_ > 4) ? 12 : 0;
+	  return layer_ + offset;
+	}
+
         bool operator<(const HGCDiskGeomDet &other) const { 
             return (subdet_ == other.subdet_ ? layer_ < other.layer_ : subdet_ < other.subdet_);
         }

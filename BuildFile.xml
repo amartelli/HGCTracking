@@ -3,10 +3,13 @@
 <use name="boost"/>
 <use name="DataFormats/ForwardDetId"/>
 <use name="DataFormats/GeometrySurface"/>
+<use name="DataFormats/GeometryVector"/>
 <use name="DataFormats/HGCRecHit"/>
+<use name="DataFormats/CaloRecHit"/>
 <use name="DataFormats/TrackReco"/>
 <use name="DataFormats/TrackingRecHit"/>
 <use name="DataFormats/TrajectorySeed"/>
+<use name="RecoEgamma/EgammaElectronAlgos"/>
 <use name="Geometry/CaloGeometry"/>
 <use name="Geometry/CommonDetUnit"/>
 <use name="Geometry/HGCalGeometry"/>
@@ -20,6 +23,7 @@
 <use name="TrackingTools/TrajectoryCleaning"/>
 <use name="TrackingTools/TrajectoryFiltering"/>
 <use name="TrackingTools/TrajectoryState"/>
+<use name="RecoLocalCalo/HGCalRecAlgos"/>
 <export>
   <lib   name="1"/>
 </export>

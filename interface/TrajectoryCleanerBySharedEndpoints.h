@@ -16,16 +16,20 @@ class TrajectoryCleanerBySharedEndpoints {
 
       void clean(std::vector<Trajectory> &trajs) const ;
       void clean(std::vector<TempTrajectory> &trajs) const ;
+      void clean(std::vector<TempTrajectory> &trajs, std::vector<TempTrajectory> *finalT) const ;
 
   private:
       float theFoundHitBonus, theLostHitPenalty;
 
       template<typename Traj> void clean_(std::vector<Traj> &trajs) const ;
+      template<typename Traj> void clean_(std::vector<Traj> &trajs, std::vector<Traj> *finalT) const ;
 
       template<typename Traj> bool cmp(const Traj &a, const Traj &b) const {
-          return  (a.chiSquared() + a.lostHits()*theLostHitPenalty - a.foundHits()*theFoundHitBonus)  < 
-                  (b.chiSquared() + b.lostHits()*theLostHitPenalty - b.foundHits()*theFoundHitBonus);
-      }
+	return  (a.chiSquared() + a.lostHits()*theLostHitPenalty - a.foundHits()*theFoundHitBonus)  <  
+	  (b.chiSquared() + b.lostHits()*theLostHitPenalty - b.foundHits()*theFoundHitBonus); 
+	/* std::cout << " a.chiSquared() + a.lostHits()*theLostHitPenalty - a.foundHits()*theFoundHitBonus = " << a.chiSquared() + a.lostHits()*theLostHitPenalty - a.foundHits()*theFoundHitBonus << std::endl; */
+	/* return(a.foundHits() > b.foundHits()); */
+     }
 };
 
 #endif

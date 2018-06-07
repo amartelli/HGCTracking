@@ -23,8 +23,24 @@
 #include "RecoParticleFlow/HGCTracking/interface/HGCTracker.h"
 #include "RecoParticleFlow/HGCTracking/interface/HGCTrackingBasicCPE.h"
 #include "RecoParticleFlow/HGCTracking/interface/TrajectoryCleanerBySharedEndpoints.h"
+//#include "RecoParticleFlow/HGCTracking/interface/TrajectoryCleanerByBranchFilter.h"
 #include "RecoParticleFlow/HGCTracking/interface/HGCTrackingData.h"
 #include "RecoParticleFlow/HGCTracking/interface/hgcdebug.h"
+
+#include "DataFormats/CaloRecHit/interface/CaloCluster.h"
+
+#include "RecoParticleFlow/HGCTracking/interface/HGCClusterBuilder.h"
+
+//monitor evolution
+/*
+struct evolutionState{ 
+float energyTot; 
+float sizeTot; 
+//LocalPoint avgPos; 
+int layer; 
+int nUnits; 
+} evoState; 
+*/
 
 class HGCTkTrajectoryBuilder {
     public:
@@ -43,7 +59,8 @@ class HGCTkTrajectoryBuilder {
 
         /// Build a trajectory from a track reference
         unsigned int trajectories(const reco::TrackRef &track, std::vector<Trajectory> &out, PropagationDirection direction=alongMomentum) const ; 
-        unsigned int trajectories(const FreeTrajectoryState &start, std::vector<Trajectory> &out, PropagationDirection direction=alongMomentum) const ; 
+	unsigned int trajectories(const reco::CaloClusterPtr &sCl, std::vector<Trajectory> &out, PropagationDirection direction=alongMomentum, int seedLayer=-1) const ;
+        unsigned int trajectories(const TrajectorySeed& trjSeed, const FreeTrajectoryState &start, std::vector<Trajectory> &out, PropagationDirection direction=alongMomentum, int seedLayer=-1) const ; 
 
         /// Ambiguity resolution
         void cleanTrajectories(std::vector<Trajectory> &trajectories) const ;
@@ -54,6 +71,8 @@ class HGCTkTrajectoryBuilder {
         //// ---- for debugging ----
         // mc truth association map 
         void setTruth(const CaloTruthRevMap *truth) { truthMap_ = truth; }
+	void setTruthBis(const std::map<uint32_t, float > *truthX, const std::map<uint32_t, float > *truthY, const std::map<uint32_t, float > *truthZ ) { 
+	  truthMapX_ = truthX; truthMapY_ = truthY; truthMapZ_ = truthZ;}
         // we keep the template private, and define public
         void printTraj(const Trajectory &traj) const { printTraj_(traj); }
         void printTraj(const TempTrajectory &traj) const { printTraj_(traj); }
@@ -61,7 +80,8 @@ class HGCTkTrajectoryBuilder {
         std::vector<std::pair<const CaloParticle *, float>> truthMatch(const TempTrajectory &traj) const { return truthMatch_(traj); }
 
     protected:
-        enum PatternRecoAlgo { SingleHitAlgo, ClusterizingAlgo, MixedAlgo };
+        enum PatternRecoAlgo { SingleHitAlgo, ClusterizingAlgo, MixedAlgo, SingleClusterAlgo };
+
 
         // --- Inputs ---
         const edm::EDGetTokenT<HGCRecHitCollection> srcEE_, srcFH_, srcBH_;
@@ -103,12 +123,17 @@ class HGCTkTrajectoryBuilder {
         edm::Handle<reco::CaloClusterCollection> srcClusters;
         // data re-arranged for tracking
         std::unique_ptr<HGCTrackingData> data_;
+
+
         // for debug
         const CaloTruthRevMap *truthMap_;
+	const std::map<uint32_t, float > *truthMapX_;
+	const std::map<uint32_t, float > *truthMapY_;
+	const std::map<uint32_t, float > *truthMapZ_;
 
         /// --- Pattern reco ---
         template<class Start>
-        std::vector<TempTrajectory> advanceOneLayer(const Start &start, const TempTrajectory &traj, const HGCDiskGeomDet *disk, bool bestHitOnly) const ;
+	  std::vector<TempTrajectory> advanceOneLayer(float startE, int startS, int seedLayer, const Start &start, const TempTrajectory &traj, const HGCDiskGeomDet *disk, bool bestHitOnly) const ;
 
         /// --- Utilities ---
         void trim(std::vector<TempTrajectory> &tempTrajectories) const {
@@ -121,6 +146,44 @@ class HGCTkTrajectoryBuilder {
         /// --- Debug ---
         template<typename Traj> void printTraj_(const Traj &t) const ;
         template<typename Traj> std::vector<std::pair<const CaloParticle *, float>> truthMatch_(const Traj &t) const ;
+
+
+	bool printDEBUG;
+	
+	HGCClusterBuilder* evoState;
+
+	/*
+	void initState(evolutionState state){
+	  state.energyTot = 0.;
+	  state.sizeTot = 0;
+	  //LocalPoint avgPos
+	  state.layer = -1;
+	  state.seedL = evoState.seedL;
+	  state.unit = 0;
+	}
+	*/
+
+	/*
+	mutable struct evolutionState{      
+	  float energyTot;            
+	  float sizeTot;              
+	  //LocalPoint avgPos;        
+	  int layer;                  
+	  int seedL;                  
+	  unsigned int nUnits;                 
+	  float energyFromSeed;            
+	} evoState;                 
+	*/
+
+	/*	
+	//evolutionState startingState;
+	mutable float evoS_energyTot;
+	mutable float evoS_sizeTot;
+	//LocalPoint avgPos; 
+	mutable int evoS_layer;
+	mutable int evoS_nUnits;
+	*/
+
 };
 
 #endif

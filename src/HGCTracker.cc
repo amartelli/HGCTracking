@@ -2,7 +2,6 @@
 #include "Geometry/CaloGeometry/interface/CaloSubdetectorGeometry.h"
 #include "FWCore/Utilities/interface/Exception.h"
 
-
 HGCTracker::HGCTracker(const CaloGeometry *geom) :
     geom_(geom)
 {
@@ -45,6 +44,9 @@ void HGCTracker::makeDisks(int subdet, int disks)
            case 3: 
                 // Phase II TDR page 98 for radlength in units of X0 (ignoring the silicon); 
                 //  xi = radlen * X0 * 0.307075 * Z/A * 1/2 = radlen * 6.76 * 0.307075 * 0.402 * 0.5 = radlen * 0.42 // for W
+	     //FIXME radlen from Valeri file of Geometry
+	     //FIXME from formula not clear
+	     //FIXME EE with StainlessSteel + Cu +CuW and dimension absorber in BH 6.8cm
                 if (i < 10) { radlen = 0.65; }
                 else if (i < 20) { radlen = 0.88; }
                 else { radlen = 1.26; }

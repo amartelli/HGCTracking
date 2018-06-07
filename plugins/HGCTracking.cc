@@ -9,17 +9,26 @@
 #include <cstdio>
 #include <iostream>
 #include <cmath>
+#include <utility>
+#include <set>
 
 #include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/CaloRecHit/interface/CaloCluster.h"
+#include "DataFormats/CaloRecHit/interface/CaloClusterFwd.h"
+#include "DataFormats/TrackingRecHit/interface/TrackingRecHit.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
 #include "RecoParticleFlow/HGCTracking/interface/HGCTrackingRecHit.h"
 #include "RecoParticleFlow/HGCTracking/interface/HGCTrackingClusteringRecHit.h"
 #include "RecoParticleFlow/HGCTracking/interface/TrajectorySeedFromTrack.h"
+#include "RecoParticleFlow/HGCTracking/interface/TrajectoryCleanerByBranchFilter.h"
 #include "RecoParticleFlow/HGCTracking/interface/HGCTkTrajectoryBuilder.h"
 #include "RecoParticleFlow/HGCTracking/interface/hgcdebug.h"
 
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 #include "FWCore/Framework/interface/stream/EDProducer.h"
+
+#include "RecoLocalCalo/HGCalRecAlgos/interface/RecHitTools.h"
+#include "TrackingTools/PatternTools/interface/TrajectoryMeasurement.h"
 
 
 class HGCTracking : public edm::stream::EDProducer<> {
@@ -36,6 +45,14 @@ class HGCTracking : public edm::stream::EDProducer<> {
         const edm::EDGetTokenT<reco::TrackCollection> srcTk_;
         const StringCutObjectSelector<reco::Track> cutTk_;
 
+        const edm::EDGetTokenT<reco::CaloClusterCollection> srcClusters_;
+        const StringCutObjectSelector<reco::CaloCluster> cutSc_;
+
+        hgcal::RecHitTools rhtools_;
+
+  //static bool orderPtr(const std::pair<reco::CaloClusterPtr, int>& a, const std::pair<reco::CaloClusterPtr, int>&  b);
+
+
         /// do the backwards fit
         const bool doBackwardsRefit_;
 
@@ -46,10 +63,22 @@ class HGCTracking : public edm::stream::EDProducer<> {
         const bool hasMCTruth_;
         const edm::EDGetTokenT<std::vector<CaloParticle>> srcTruth_;
         CaloTruthRevMap revTruthMap_;
+        std::map<uint32_t, float> revTruthMapX_;
+        std::map<uint32_t, float> revTruthMapY_;
+        std::map<uint32_t, float> revTruthMapZ_;
+
+  bool testPU;
+  //for PU single Particle
+  float cp_eta, cp_phi, cp_pt, cp_px, cp_py, cp_pz;
+
+  //        bool compareSCl(reco::CaloCluster* a, reco::CaloCluster* b);
 
         void declareOutput(const std::string &label); 
         void makeOutput(const std::vector<Trajectory> &trajs, edm::Event &out, const std::string &label); 
         void writeAllHitsByLayer(const HGCRecHitCollection &hits, edm::Event &out, const std::string &label, int layers);
+
+        bool alreadyTracked(const reco::CaloClusterPtr sclPtr, std::vector<Trajectory> &out);
+
 };
 
 
@@ -57,6 +86,8 @@ HGCTracking::HGCTracking(const edm::ParameterSet& ps) :
     builder_(ps, consumesCollector()),
     srcTk_(consumes<reco::TrackCollection>(ps.getParameter<edm::InputTag>("srcTk"))),
     cutTk_(ps.getParameter<std::string>("cutTk")),
+    srcClusters_(consumes<reco::CaloClusterCollection>(ps.getParameter<edm::InputTag>("srcClusters"))),
+    cutSc_(ps.getParameter<std::string>("cutSc")),
     doBackwardsRefit_(ps.getParameter<bool>("doBackwardsRefit")),
     srcEE_(consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcEE"))),
     srcFH_(consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcFH"))),
@@ -73,12 +104,30 @@ HGCTracking::HGCTracking(const edm::ParameterSet& ps) :
         produces<std::vector<reco::CaloCluster>>("FH");
         produces<std::vector<reco::CaloCluster>>("BH");
     }
+
+
+    //for PU single Particle
+    testPU = true;
+    cp_eta = 0;
+    cp_phi = 0;
+    cp_pt = 0;
+    cp_px = 0;
+    cp_py = 0;
+    cp_pz = 0;
 }
+
+
+
+// bool HGCTracking::orderPtr(const std::pair<reco::CaloClusterPtr, int>& a, const std::pair<reco::CaloClusterPtr, int>&  b){
+//   return a.second < b.second;
+// }
 
 void
 HGCTracking::produce(edm::Event& evt, const edm::EventSetup& es)
 {
     builder_.init(evt, es);
+
+    rhtools_.getEventSetup(es);
 
     edm::Handle<std::vector<CaloParticle>> truth;
     if (hasMCTruth_) {
@@ -86,19 +135,31 @@ HGCTracking::produce(edm::Event& evt, const edm::EventSetup& es)
         for (const CaloParticle &p : *truth) {
             if (hgctracking::g_debuglevel > 0) {
                 if (p.eventId().event() == 0 && p.eventId().bunchCrossing() == 0) {
-                    printf("Considering truth particle of pdgId %+6d eid %d/%d pt %7.1f eta %+5.2f phi %+5.2f simclusters %4d \n", 
-                            p.pdgId(), p.eventId().event(), p.eventId().bunchCrossing(), p.pt(), p.eta(), p.phi(), int(p.simClusters().size()));
+                    printf("Considering truth particle of pdgId %+6d eid %d/%d pt %7.1f energy %7.1f  eta %+5.2f phi %+5.2f simclusters %4d \n", 
+			   p.pdgId(), p.eventId().event(), p.eventId().bunchCrossing(), p.pt(), p.energy(), p.eta(), p.phi(), int(p.simClusters().size()));
+
+		    //for PU single Particle
+		    if(testPU){
+		    cp_eta = p.eta(); cp_phi = p.phi(); cp_pt = p.pt(); 
+		    cp_px = p.momentum().x(); cp_py = p.momentum().y(); cp_pz = p.momentum().z();
+		    }
                 }
             }
             for (const auto & scr : p.simClusters()) {
-                //printf("    simcluster pt %7.1f eta %+5.2f phi %+5.2f rechits %4d simhits %d \n",
-                //    scr->pt(), scr->eta(), scr->phi(), scr->numberOfRecHits(), scr->numberOfSimHits());
+	      //printf("    simcluster pt %7.1f eta %+5.2f phi %+5.2f rechits %4d simhits %d \n",
+	      //scr->pt(), scr->eta(), scr->phi(), scr->numberOfRecHits(), scr->numberOfSimHits());
                 for (const auto & pair : scr->hits_and_fractions()) {
                     revTruthMap_.emplace(pair.first, std::make_pair(&p, pair.second));
+                    revTruthMapX_.emplace(pair.first, rhtools_.getPosition(DetId(pair.first)).x());
+                    revTruthMapY_.emplace(pair.first, rhtools_.getPosition(DetId(pair.first)).y());
+                    revTruthMapZ_.emplace(pair.first, rhtools_.getPosition(DetId(pair.first)).z());
+		    //std::cout << " >>> recHit associated => x " << rhtools_.getPosition(DetId(pair.first)).x() << " y => " << rhtools_.getPosition(DetId(pair.first)).y() 
+		    //<< " layer = " << rhtools_.getLayerWithOffset(DetId(pair.first)) << std::endl;
                 }
             }
         }
         builder_.setTruth(&revTruthMap_);
+        builder_.setTruthBis(&revTruthMapX_, &revTruthMapY_, &revTruthMapZ_);
     }
     
 
@@ -116,35 +177,107 @@ HGCTracking::produce(edm::Event& evt, const edm::EventSetup& es)
     edm::Handle<reco::TrackCollection> tracks;
     evt.getByToken(srcTk_, tracks);
 
+    // Get 2d clusters
+    edm::Handle<reco::CaloClusterCollection> sClusters;
+    evt.getByToken(srcClusters_, sClusters);
+
+
     // Loop on tracks, make one or more trajectories per track
     std::vector<Trajectory> finaltrajectories;
     unsigned int itrack = 0;
-    for (const reco::Track &tk : *tracks) { ++itrack;
+  
+    ////RA removed for PU
+  for (const reco::Track &tk : *tracks) { ++itrack;
         if (!cutTk_(tk)) continue;
+
+	if(testPU){
+	//for PU check
+	float dEta = std::abs(cp_eta - tk.eta());
+	float dPhi = std::abs(cp_phi - tk.phi());
+	if(dPhi > 3.14) dPhi -= 3.14;
+	float dR = sqrt(dEta*dEta + dPhi*dPhi);
+
+	//std::cout << " dEta = " << dEta << " dPhi = " << dPhi << " dR = " << dR << " ptRatio = " << tk.pt()/cp_pt << std::endl;
+	if(dR > 0.005 || std::abs(tk.pt()/cp_pt -1) > 0.1) continue;
+	}
+
         if (hgctracking::g_debuglevel > 1) {
             printf("\n\nConsidering track pt %7.1f eta %+5.2f phi %+5.2f valid hits %d outer lost hits %d highPurity %1d\n", tk.pt(), tk.eta(), tk.phi(), tk.hitPattern().numberOfValidHits(), tk.hitPattern().numberOfLostHits(reco::HitPattern::MISSING_OUTER_HITS), tk.quality(reco::Track::highPurity));
         }
         builder_.trajectories( reco::TrackRef(tracks,itrack-1), finaltrajectories, alongMomentum );
     }
+  
     if (hgctracking::g_debuglevel > 0) {
-        printf("\n\nA total of %lu trajectories found in the event\n",finaltrajectories.size());
+        printf("\n\n from TRACk =>   A total of %lu trajectories found in the event\n",finaltrajectories.size());
+    }
+
+    //    std::cout << " >> load clusters " << std::endl;
+    if(!testPU){ 
+   std::vector<std::pair<reco::CaloClusterPtr, int> > sClPtrSorted;
+    unsigned int iScl = 0;
+    for (const reco::CaloCluster &sCl : *sClusters) { 
+      ++iScl;
+      if (!cutSc_(sCl)) continue;
+      int layer = rhtools_.getLayerWithOffset(sCl.hitsAndFractions()[0].first);
+      //caveat does not care about zSide
+      reco::CaloClusterPtr sClPtr(sClusters, iScl-1);
+      sClPtrSorted.push_back(std::pair<reco::CaloClusterPtr, int>(sClPtr, layer));
+    }
+
+    //sort collection for layer
+    std::sort(sClPtrSorted.begin(), sClPtrSorted.end(), [](const std::pair<reco::CaloClusterPtr, int>& a, const std::pair<reco::CaloClusterPtr, int>& b) {
+	return a.second < b.second;
+      });
+    //    std::sort(sClPtrSorted.begin(), sClPtrSorted.end(), orderPtr);
+    for (std::pair<reco::CaloClusterPtr, int> sClPtrItr : sClPtrSorted){
+      const reco::CaloClusterPtr sClPtr = sClPtrItr.first;
+
+      float sClpT = sClPtr->energy()/cosh(sClPtr->eta());
+      int layer = rhtools_.getLayerWithOffset(sClPtr->hitsAndFractions()[0].first);
+
+      if((layer <= 10 && sClpT < 0.05) || (layer > 10 && sClpT < 0.01)){
+	//	std::cout << " >>> skipping cluster: layer = " << layer << " pT = " << sClpT << " size = " << sClPtr->size() << std::endl;
+
+	continue;
+      }
+      
+      //      if(layer != 1) continue;
+      if (hgctracking::g_debuglevel > 1) {
+	printf("\n\nConsidering cluster energy %7.1f   pT %7.1f   eta %+5.2f   phi %+5.2f   size %zu  layer %d \n", sClPtr->energy(), sClpT,  sClPtr->eta(), sClPtr->phi(), sClPtr->size(), layer);
+      }
+      if(alreadyTracked(sClPtr, finaltrajectories)) {
+	//	std::cout << " skipping cluster already tracked " << std::endl;
+	continue;
+      }
+      //std::cout << " ok traj " << std::endl;
+      builder_.trajectories( sClPtr, finaltrajectories, alongMomentum, layer-1);
+    }
+    }
+    if (hgctracking::g_debuglevel > 0) {
+        printf("\n\n from CLUSTER =>   A total of %lu trajectories found in the event\n",finaltrajectories.size());
     }
 
     // Global cleaning (should not do much except in case of collimated tracks)
     unsigned int size_pre = finaltrajectories.size();
-    builder_.cleanTrajectories(finaltrajectories);
+    //RA removed cleaning for the moment => need to replace with a tree structure to filter replicated 2D and keep the branches
+    //builder_.cleanTrajectories(finaltrajectories);
     if (hgctracking::g_debuglevel > 0 && size_pre != finaltrajectories.size()) {
-        printf("A total of %lu trajectories after multiple cleaner\n", finaltrajectories.size());
+      printf("A total of %lu trajectories after multiple cleaner\n", finaltrajectories.size());
     }
+    
+
+    //    std::cout << " end part of trajectory cleaning by shared hits " << std::endl;
 
     // Debug Printout 
     if (hgctracking::g_debuglevel > 0)  {
         std::set<const reco::Track *> done;
         for (const Trajectory &t : finaltrajectories) {
             printf("- Trajectory     "); builder_.printTraj(t);
+	    /*
             const reco::Track & tk  = * (dynamic_cast<const TrajectorySeedFromTrack &>(t.seed())).track();
             printf("\t from track pt %7.1f eta %+5.2f phi %+5.2f valid hits %2d outer lost hits %d highPurity %1d\n", tk.pt(), tk.eta(), tk.phi(), tk.hitPattern().numberOfValidHits(), tk.hitPattern().numberOfLostHits(reco::HitPattern::MISSING_OUTER_HITS), tk.quality(reco::Track::highPurity));
             done.insert(&tk);
+	    */
         }
         printf("Seed tracks not reconstructed:\n");
         for (const reco::Track &tk : *tracks) {
@@ -181,6 +314,9 @@ HGCTracking::produce(edm::Event& evt, const edm::EventSetup& es)
 
     builder_.done();
     revTruthMap_.clear();
+    revTruthMapX_.clear();
+    revTruthMapY_.clear();
+    revTruthMapZ_.clear();
 }
 
 void HGCTracking::declareOutput(const std::string &label) 
@@ -190,58 +326,124 @@ void HGCTracking::declareOutput(const std::string &label)
     produces<std::vector<reco::Track>>(label);
     produces<std::vector<reco::Track>>(label+"Seed");
     produces<std::vector<reco::CaloCluster>>(label);
+    produces<std::vector<reco::CaloCluster>>(label+"allTrk");
 }
 
 void HGCTracking::makeOutput(const std::vector<Trajectory> &trajs, edm::Event &out, const std::string &label) 
 {
+
+  //std::cout << " >>> makeOutput trajs.size() = " << trajs.size() << std::endl;
     std::unique_ptr<TrackingRecHitCollection> outHits(new TrackingRecHitCollection());
     std::unique_ptr<std::vector<reco::TrackExtra>> outTkEx(new std::vector<reco::TrackExtra>());
     std::unique_ptr<std::vector<reco::Track>> outTk(new std::vector<reco::Track>());
     std::unique_ptr<std::vector<reco::CaloCluster>> outCl(new std::vector<reco::CaloCluster>());
+    std::unique_ptr<std::vector<reco::CaloCluster>> outClAll(new std::vector<reco::CaloCluster>());
     std::unique_ptr<std::vector<reco::Track>> outTkSeed(new std::vector<reco::Track>());
     auto rTrackExtras = out.getRefBeforePut<reco::TrackExtraCollection>(label);
     auto rHits = out.getRefBeforePut<TrackingRecHitCollection>(label);
 
+
+    TrajectoryCleanerByBranchFilter myCleaner;
+
+    //    template<typename Traj>
+    std::map<unsigned int, std::vector<TrajectoryMeasurement> > allHits = myCleaner.mergeTraj(trajs);
+
+
+    //    std::cout << " now save Clusters " << std::endl;
+    for( auto mapIt : allHits){
+
+      reco::CaloCluster hits;
+      bool first = true;
+      float energy = 0;
+      GlobalPoint pos; GlobalVector mom; //int q = 1;
+      GlobalPoint outpos; GlobalVector outmom;
+      unsigned int /*ifirst = outHits->size(),*/ nhits = 0;
+
+      //  std::cout << " filling cluster " << mapIt.first << std::endl;
+
+      for( auto rhIt : mapIt.second){
+
+	const auto & tm = rhIt;
+        outHits->push_back(tm.recHit()->clone()); nhits++;
+        if (!tm.recHit()->isValid()) continue;
+        if (first) {
+          pos = tm.updatedState().globalPosition();
+          mom = tm.updatedState().globalMomentum();
+          //      q = tm.updatedState().charge();
+          hits.setPosition(math::XYZPoint(pos.x(), pos.y(), pos.z()));
+          first = false;
+        } else if (tm.updatedState().isValid()) {
+          outpos = tm.updatedState().globalPosition();
+          outmom = tm.updatedState().globalMomentum();	
+	} 
+	if (typeid(*tm.recHit()) == typeid(HGCTrackingRecHitFromCluster)) {                             
+	  const reco::CaloCluster &cl = *(dynamic_cast<const HGCTrackingRecHitFromCluster&>(*tm.recHit())).objRef();                                           
+	  float sumHitsEnergy = 0.;                                                                                 
+	  for (auto & p : cl.hitsAndFractions()) { 
+	    if (p.second > 0) hits.addHitAndFraction(p.first, p.second);  
+	    sumHitsEnergy += p.second;
+	  }  
+	  energy += cl.energy();  
+	} 
+	else if (typeid(*tm.recHit()) == typeid(HGCTrackingClusteringRecHit)) { 
+	  for (auto & hr : (dynamic_cast<const HGCTrackingClusteringRecHit&>(*tm.recHit())).objRefs()) { 
+	    hits.addHitAndFraction(hr->id(), 1.0); 
+	  } 
+	  energy += ((dynamic_cast<const HGCTrackingClusteringRecHit&>(*tm.recHit())).energy()); 
+	} 
+	else { 
+	  energy += ((dynamic_cast<const HGCTrackingRecHitFromHit&>(*tm.recHit())).energy()); 
+	  hits.addHitAndFraction(tm.recHit()->geographicalId(), 1.0);
+	}                           
+      }
+      //      std::cout << " reco cl energy = " << energy << std::endl;
+      hits.setEnergy(energy);
+      hits.setCorrectedEnergy(energy);
+      hits.setPosition(math::XYZPoint(0.5*(pos.x()+outpos.x()), 0.5*(pos.y()+outpos.y()), 0.5*(pos.z()+outpos.z())));
+      outCl->push_back(hits);
+      
+    }
+    
     for (const Trajectory &t : trajs) {
-        reco::CaloCluster hits;
-        bool first = true;
-        float energy = 0;
-        GlobalPoint pos; GlobalVector mom; int q = 1;
-        GlobalPoint outpos; GlobalVector outmom; 
-        unsigned int ifirst = outHits->size(), nhits = 0;
-        for (const auto & tm : t.measurements()) {
-            outHits->push_back(tm.recHit()->clone()); nhits++;
-            if (!tm.recHit()->isValid()) continue;
-            if (first) {
-                pos = tm.updatedState().globalPosition();
-                mom = tm.updatedState().globalMomentum();
-                q = tm.updatedState().charge();
-                hits.setPosition(math::XYZPoint(pos.x(), pos.y(), pos.z()));
-                first = false;
-            } else if (tm.updatedState().isValid()) {
-                outpos = tm.updatedState().globalPosition();
-                outmom = tm.updatedState().globalMomentum();
-            }
-            if (typeid(*tm.recHit()) == typeid(HGCTrackingRecHitFromCluster)) {
-                const reco::CaloCluster &cl = *(dynamic_cast<const HGCTrackingRecHitFromCluster&>(*tm.recHit())).objRef();
-                for (auto & p : cl.hitsAndFractions()) {
-                    if (p.second > 0) hits.addHitAndFraction(p.first, p.second);
-                }
-                energy += cl.energy();
-            } else if (typeid(*tm.recHit()) == typeid(HGCTrackingClusteringRecHit)) {
-                for (auto & hr : (dynamic_cast<const HGCTrackingClusteringRecHit&>(*tm.recHit())).objRefs()) {
-                    hits.addHitAndFraction(hr->id(), 1.0);
-                }
-                energy += ((dynamic_cast<const HGCTrackingClusteringRecHit&>(*tm.recHit())).energy());
-            } else {
-                energy += ((dynamic_cast<const HGCTrackingRecHitFromHit&>(*tm.recHit())).energy());
-                hits.addHitAndFraction(tm.recHit()->geographicalId(), 1.0);
-            }
-        }
-        hits.setEnergy(energy);
-        hits.setCorrectedEnergy(energy);
-        hits.setPosition(math::XYZPoint(0.5*(pos.x()+outpos.x()), 0.5*(pos.y()+outpos.y()), 0.5*(pos.z()+outpos.z())));
-        outCl->push_back(hits);
+      reco::CaloCluster hits;
+      bool first = true;
+      float energy = 0;
+      GlobalPoint pos; GlobalVector mom; int q = 1;
+      GlobalPoint outpos; GlobalVector outmom; 
+      unsigned int ifirst = outHits->size(), nhits = 0;
+      for (const auto & tm : t.measurements()) {
+	outHits->push_back(tm.recHit()->clone()); nhits++;
+	if (!tm.recHit()->isValid()) continue;
+	if (first) {
+	  pos = tm.updatedState().globalPosition();
+	  mom = tm.updatedState().globalMomentum();
+	  q = tm.updatedState().charge();
+	  hits.setPosition(math::XYZPoint(pos.x(), pos.y(), pos.z()));
+	  first = false;
+	} else if (tm.updatedState().isValid()) {
+	  outpos = tm.updatedState().globalPosition();
+	  outmom = tm.updatedState().globalMomentum();
+	}
+	if (typeid(*tm.recHit()) == typeid(HGCTrackingRecHitFromCluster)) {
+	  const reco::CaloCluster &cl = *(dynamic_cast<const HGCTrackingRecHitFromCluster&>(*tm.recHit())).objRef();
+	  for (auto & p : cl.hitsAndFractions()) {
+	    if (p.second > 0) hits.addHitAndFraction(p.first, p.second);
+	  }
+	  energy += cl.energy();
+	} else if (typeid(*tm.recHit()) == typeid(HGCTrackingClusteringRecHit)) {
+	  for (auto & hr : (dynamic_cast<const HGCTrackingClusteringRecHit&>(*tm.recHit())).objRefs()) {
+	    hits.addHitAndFraction(hr->id(), 1.0);
+	  }
+	  energy += ((dynamic_cast<const HGCTrackingClusteringRecHit&>(*tm.recHit())).energy());
+	} else {
+	  energy += ((dynamic_cast<const HGCTrackingRecHitFromHit&>(*tm.recHit())).energy());
+	  hits.addHitAndFraction(tm.recHit()->geographicalId(), 1.0);
+	}
+      }
+      hits.setEnergy(energy);
+      hits.setCorrectedEnergy(energy);
+      hits.setPosition(math::XYZPoint(0.5*(pos.x()+outpos.x()), 0.5*(pos.y()+outpos.y()), 0.5*(pos.z()+outpos.z())));
+      outClAll->push_back(hits);
 
         reco::TrackExtra extra(reco::Track::Point(outpos.x(), outpos.y(), outpos.z()), reco::Track::Vector(outmom.x(), outmom.y(), outmom.z()), true,  
                                reco::Track::Point(pos.x(), pos.y(), pos.z()), reco::Track::Vector(mom.x(), mom.y(), mom.z()), true,
@@ -276,16 +478,21 @@ void HGCTracking::makeOutput(const std::vector<Trajectory> &trajs, edm::Event &o
         }
         outTk->push_back(trk);
 
-        const reco::Track & seedtk  = * (dynamic_cast<const TrajectorySeedFromTrack &>(t.seed())).track();
-        outTkSeed->push_back(seedtk);
+	//	std::cout << " now save TkSeed " << std::endl;
+
+        // const reco::Track & seedtk  = * (dynamic_cast<const TrajectorySeedFromTrack &>(t.seed())).track();
+        // outTkSeed->push_back(seedtk);
     }
     for (unsigned int i = 0, n = outTk->size(); i < n; ++i) {
         (*outTk)[i].setExtra(reco::TrackExtraRef(rTrackExtras, i));
     }
+    
+    
     out.put(std::move(outHits), label);
     out.put(std::move(outTkEx), label);
     out.put(std::move(outTk), label);
     out.put(std::move(outCl), label);
+    out.put(std::move(outClAll), label+"allTrk");
     out.put(std::move(outTkSeed), label+"Seed");
 }
 
@@ -294,6 +501,7 @@ void HGCTracking::writeAllHitsByLayer(const HGCRecHitCollection &hits, edm::Even
     std::unique_ptr<std::vector<reco::CaloCluster>> outCl(new std::vector<reco::CaloCluster>(2*layers));
 
     for (const HGCRecHit &hit : hits) {
+      if(hit.signalOverSigmaNoise() < 5.) continue;
         int zside, layer;
         if (hit.id().det() == DetId::Forward) {
             HGCalDetId parsed(hit.id());
@@ -315,6 +523,23 @@ void HGCTracking::writeAllHitsByLayer(const HGCRecHitCollection &hits, edm::Even
 
     out.put(std::move(outCl), label);
 }
+
+
+bool HGCTracking::alreadyTracked(const reco::CaloClusterPtr sclPtr, std::vector<Trajectory> &out)
+{
+  for (const Trajectory &t : out) {
+    for (const auto & tm : t.measurements()) {
+      if (typeid(*tm.recHit()) == typeid(HGCTrackingRecHitFromCluster)) 
+	{
+	  const reco::CaloCluster &cl = *(dynamic_cast<const HGCTrackingRecHitFromCluster&>(*tm.recHit())).objRef();
+	  if(cl == *sclPtr) return true;
+	}
+    }
+  }
+  return false;
+  
+}
+
 
 
 

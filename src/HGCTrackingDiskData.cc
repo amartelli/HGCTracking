@@ -61,12 +61,18 @@ void HGCTrackingDiskData::addClusters(const edm::Handle<reco::CaloClusterCollect
 
 std::vector<TrajectoryMeasurement> HGCTrackingDiskData::measurements(TrajectoryStateOnSurface &tsos, const MeasurementEstimator &mest) const 
 {
+  bool printDEBUG = false;
+
+  std::set<uint32_t> foundIDs;
+
     std::vector<TrajectoryMeasurement> ret;
     GlobalPoint lp = tsos.globalPosition();
     const LocalError & loce = tsos.localError().positionError();
-    float window = 4*std::sqrt(std::max(loce.xx(), loce.yy()));
+    float window = 5*std::sqrt(std::max(loce.xx(), loce.yy()));
     for (const auto &pair : index_) {
         if (std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)) < std::max(2.f,window + 3*pair.first.size)) {
+	  if(printDEBUG)	  printf( " dist tot e' = %+7.2f    window max e' = %+7.2f ", std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)), 
+		  std::max(3.f,window + 3*pair.first.size) );
             const value_type & obj = *pair.second;
             auto const & params = cpe_->localParameters(obj, tsos.surface());
             auto hitptr = std::make_shared<HGCTrackingRecHitFromHit>(obj.id(), 
@@ -82,11 +88,17 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::measurements(TrajectoryS
                 if (est_pair.second > 400) continue;
                 //printf("\t\tstate at x = %+7.2f +- %4.2f   y = %+7.2f +- %4.2f   hit at x = %+7.2f  y = %+7.2f    energy %7.3f   dist = %5.1f chi2 = %8.1f   pass = %1d ",
                 //    lp.x(), sqrt(loce.xx()), lp.y(), sqrt(loce.yy()), pair.first.x, pair.first.y, energy, hypot(lp.x()-pair.first.x,lp.y()-pair.first.y), est_pair.second, est_pair.first);
-                printf("\t\tstate at x = %+7.2f   y = %+7.2f  dxy = %4.2f   hit %12d at x = %+7.2f  y = %+7.2f    energy %7.3f   dist = %5.1f chi2 = %8.1f   pass = %1d ",
-                        lp.x(), lp.y(), sqrt(loce.xx()+loce.yy()), pair.second->id().rawId(), pair.first.x, pair.first.y, energy, hypot(lp.x()-pair.first.x,lp.y()-pair.first.y), est_pair.second, est_pair.first);
+                printf("\t\tstate at x = %+7.2f   y = %+7.2f  dxy = %4.2f   hit %12d at x = %+7.2f  y = %+7.2f    energy %7.3f   dist = %5.1f chi2 = %8.1f   pass = %1d  time = %7.3f",
+		       lp.x(), lp.y(), sqrt(loce.xx()+loce.yy()), pair.second->id().rawId(), pair.first.x, pair.first.y, energy, hypot(lp.x()-pair.first.x,lp.y()-pair.first.y), est_pair.second, est_pair.first, 
+		       obj.time()-5.);
+		if(printDEBUG)		std::cout << " dist X = " << std::abs(lp.x() - pair.first.x) << " Y = " << std::abs(lp.y() - pair.first.y) << std::endl;
                 if (truthMap_) {
-                    auto range = truthMap_->equal_range(pair.second->id().rawId());
-                    for (; range.first != range.second; ++range.first) {
+		  auto range = truthMap_->equal_range(pair.second->id().rawId());
+		  int extensionOfRange = 0;
+		  for (; range.first != range.second; ++range.first) {
+		      foundIDs.insert(pair.second->id().rawId());
+		      if(printDEBUG)		      std::cout << " extension of range = " << extensionOfRange << std::endl;
+		      ++extensionOfRange;
                         const auto &pair = *range.first;
                         const auto &p = *pair.second.first;
                         printf("    from %s pdgId %+d eid %d/%d pt %.1f eta %+5.2f phi %+5.2f ",
@@ -94,11 +106,47 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::measurements(TrajectoryS
                                 p.pdgId(), p.eventId().event(), p.eventId().bunchCrossing(), p.pt(), p.eta(), p.phi());
                         if (pair.second.second < 0.999) printf("(frac %.2f) ", pair.second.second); 
                     }
-                }
+		}
                 printf("\n");
             }
         }
+	else { 
+	  if(printDEBUG)	  printf( " SCARTATO dist tot e' = %+7.2f    window max e' = %+7.2f ", std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)),             
+		  std::max(3.f,window + 3*pair.first.size) );                                                                                                      
+	  
+	}                                                                                                                                                          
     }
+    /*
+    //RA add hits not found
+    if (truthMap_) {
+      std::cout << " hits >>>>  on Z = " << lp.z() << std::endl;
+      std::map<uint32_t, float>::const_iterator itMX = truthMapX_->begin();
+      std::map<uint32_t, float>::const_iterator itMY = truthMapY_->begin();
+      std::map<uint32_t, float>::const_iterator itMZ = truthMapZ_->begin();
+      for(std::unordered_multimap<uint32_t,std::pair<const CaloParticle *,float>>::const_iterator itM = truthMap_->begin(); itM != truthMap_->end(); ++itM, ++itMZ, ++itMX, ++itMY){
+
+	if(lp.z() != itMZ->second) continue;
+	if (std::find(foundIDs.begin(), foundIDs.end(), itM->first) == foundIDs.end()) {
+	  auto range = truthMap_->equal_range(itM->first);
+	  int extensionOfRangeLost = 0;
+	  for (; range.first != range.second; ++range.first) {
+	    std::cout << " extension of rangeLost = " << extensionOfRangeLost << std::endl;
+	    ++extensionOfRangeLost;
+	    const auto &pair = *range.first;
+	    const auto &p = *pair.second.first;
+	    printf("    from %s pdgId %+d eid %d/%d pt %.1f eta %+5.2f phi %+5.2f ",
+		   (p.eventId().event()==0&&p.eventId().bunchCrossing()==0 ? "SIGNAL" : "pileup"),
+		   p.pdgId(), p.eventId().event(), p.eventId().bunchCrossing(), p.pt(), p.eta(), p.phi());
+	    if (pair.second.second < 0.999) printf("(frac %.2f) ", pair.second.second);
+	    std::cout << " lost hit x = " << itMX->second << " y = " << itMY->second << " z = " << itMZ->second << std::endl;
+	    std::cout << " dist X = " << std::abs(lp.x() - itMX->second) << " Y = " << std::abs(lp.y() - itMY->second) 
+		      << " tot = " << std::max(std::abs(lp.x()-itMX->second), std::abs(lp.y()-itMY->second)) << std::endl;
+	  }
+
+	}
+      }
+    }
+    */
     return ret;
 }
 
@@ -107,7 +155,7 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::clusterizedMeasurements(
     std::vector<TrajectoryMeasurement> ret;
     GlobalPoint lp = tsos.globalPosition();
     const LocalError & loce = tsos.localError().positionError();
-    float window = 4*std::sqrt(std::max(loce.xx(), loce.yy()));
+    float window = 5*std::sqrt(std::max(loce.xx(), loce.yy()));
     std::vector<std::pair<HGCTrackingBasicCPE::PositionHint,const_iterator>> selHits;
     std::vector<TrackingRecHit::ConstRecHitPointer> hitptrs;
     std::vector<std::pair<bool,float>> estpairs;
@@ -202,12 +250,21 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::clusterizedMeasurements(
 
 std::vector<TrajectoryMeasurement> HGCTrackingDiskData::clusterMeasurements(TrajectoryStateOnSurface &tsos, const MeasurementEstimator &mest) const 
 {
+  bool printDEBUG = false;
+
+  std::set<uint32_t> foundIDs;
+
     std::vector<TrajectoryMeasurement> ret;
     GlobalPoint lp = tsos.globalPosition();
     const LocalError & loce = tsos.localError().positionError();
-    float window = 4*std::sqrt(std::max(loce.xx(), loce.yy()));
+    float window = 5*std::sqrt(std::max(loce.xx(), loce.yy()));
     for (const auto &pair : clusterIndex_) {
         if (std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)) < std::max(2.f,window + 3*pair.first.size)) {
+
+
+	  if(printDEBUG)	  printf( " dist tot e' = %+7.2f    window max e' = %+7.2f ", std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)), 
+		  std::max(3.f,window + 3*pair.first.size) );
+
             const reco::CaloCluster & obj = *pair.second;
             auto const & params = cpe_->localParameters(obj, tsos.surface());
             auto hitptr = std::make_shared<HGCTrackingRecHitFromCluster>(obj.hitsAndFractions().front().first, 
@@ -223,8 +280,9 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::clusterMeasurements(Traj
                 if (est_pair.second > 400) continue;
                 //printf("\t\tstate at x = %+7.2f +- %4.2f   y = %+7.2f +- %4.2f   hit at x = %+7.2f  y = %+7.2f    energy %7.3f   dist = %5.1f chi2 = %8.1f   pass = %1d ",
                 //    lp.x(), sqrt(loce.xx()), lp.y(), sqrt(loce.yy()), pair.first.x, pair.first.y, energy, hypot(lp.x()-pair.first.x,lp.y()-pair.first.y), est_pair.second, est_pair.first);
-                printf("\t\tstate at x = %+7.2f   y = %+7.2f  dxy = %4.2f   cluster %8d at x = %+7.2f  y = %+7.2f    energy %7.3f   dist = %5.1f chi2 = %8.1f   pass = %1d\n",
-                        lp.x(), lp.y(), sqrt(loce.xx()+loce.yy()), int(hitptr->objRef().key()), pair.first.x, pair.first.y, energy, hypot(lp.x()-pair.first.x,lp.y()-pair.first.y), est_pair.second, est_pair.first);
+                printf("\t\tstate at x = %+7.2f   y = %+7.2f  dxy = %4.2f   cluster %8d at x = %+7.2f  y = %+7.2f   energy %7.3f   dist = %5.1f chi2 = %8.1f   pass = %1d\n",
+		       lp.x(), lp.y(), sqrt(loce.xx()+loce.yy()), int(hitptr->objRef().key()), pair.first.x, pair.first.y, energy, hypot(lp.x()-pair.first.x,lp.y()-pair.first.y), est_pair.second, est_pair.first);
+		if(printDEBUG)		std::cout << " dist X = " << std::abs(lp.x() - pair.first.x) << " Y = " << std::abs(lp.y() - pair.first.y) << std::endl;
                 for (const auto & hitAndF : pair.second->hitsAndFractions()) {
                     if (hitAndF.second == 0) continue;
                     GlobalPoint hitgp = cpe_->getPosition(hitAndF.first);
@@ -233,19 +291,59 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::clusterMeasurements(Traj
                     if (truthMap_) {
                         auto range = truthMap_->equal_range(hitAndF.first.rawId());
                         for (; range.first != range.second; ++range.first) {
+			  foundIDs.insert(hitAndF.first.rawId());
                             const auto &pair = *range.first;
                             const auto &p = *pair.second.first;
                             printf("    from %s pdgId %+d eid %d/%d pt %.1f eta %+5.2f phi %+5.2f ",
                                     (p.eventId().event()==0&&p.eventId().bunchCrossing()==0 ? "SIGNAL" : "pileup"),
                                     p.pdgId(), p.eventId().event(), p.eventId().bunchCrossing(), p.pt(), p.eta(), p.phi());
-                            if (pair.second.second < 0.999) printf("(frac %.2f) ", pair.second.second); 
+                            if (pair.second.second < 0.999) printf("(frac %.2f) ", pair.second.second); 			    
                         }
                     }
                     printf("\n");
                 }
             }
         }
+	else {
+	  if(printDEBUG)	  printf( " SCARTATO dist tot e' = %+7.2f    window max e' = %+7.2f ", std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)),
+                  std::max(3.f,window + 3*pair.first.size) );
+
+	}
     }
+
+    /*
+    //RA add hits not found                                                                                                                                                                 
+    if (truthMap_) {
+      std::cout << " cluster >>>>  on Z = " << lp.z() << std::endl;
+      std::map<uint32_t, float>::const_iterator itMX = truthMapX_->begin();
+      std::map<uint32_t, float>::const_iterator itMY = truthMapY_->begin();
+      std::map<uint32_t, float>::const_iterator itMZ = truthMapZ_->begin();
+      for(std::unordered_multimap<uint32_t,std::pair<const CaloParticle *,float>>::const_iterator itM = truthMap_->begin(); itM != truthMap_->end(); ++itM, ++itMZ, ++itMX, ++itMY){
+
+        if(lp.z() != itMZ->second) continue;
+        if (std::find(foundIDs.begin(), foundIDs.end(), itM->first) == foundIDs.end()) {
+          auto range = truthMap_->equal_range(itM->first);
+          int extensionOfRangeLost = 0;
+          for (; range.first != range.second; ++range.first) {
+	    std::cout << " extension of rangeLost = " << extensionOfRangeLost << std::endl;
+            ++extensionOfRangeLost;
+            const auto &pair = *range.first;
+            const auto &p = *pair.second.first;
+            printf("    from %s pdgId %+d eid %d/%d pt %.1f eta %+5.2f phi %+5.2f ",
+                   (p.eventId().event()==0&&p.eventId().bunchCrossing()==0 ? "SIGNAL" : "pileup"),
+                   p.pdgId(), p.eventId().event(), p.eventId().bunchCrossing(), p.pt(), p.eta(), p.phi());
+            if (pair.second.second < 0.999) printf("(frac %.2f) ", pair.second.second);
+	    std::cout << " lost hit x = " << itMX->second << " y = " << itMY->second << " z = " << itMZ->second << std::endl;
+	    std::cout << " dist X = " << std::abs(lp.x() - itMX->second) << " Y = " << std::abs(lp.y() - itMY->second)
+		      << " tot = " << std::max(std::abs(lp.x()-itMX->second), std::abs(lp.y()-itMY->second)) << std::endl;
+          }
+
+        }
+      }
+    }
+    */
+
+
     return ret;
 }
 

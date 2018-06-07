@@ -6,7 +6,8 @@ hgcTrajectoryBuilderPSet = cms.PSet(
     srcFH = cms.InputTag("HGCalRecHit:HGCHEFRecHits"),
     srcBH = cms.InputTag("HGCalRecHit:HGCHEBRecHits"),
     ### Clusters
-    srcClusters = cms.InputTag("hgcalLayerClusters"),
+    srcClusters = cms.InputTag("hgcClean2D"),
+    #srcClusters = cms.InputTag("hgcalLayerClusters"),
 
     ### Seeding
     # initial uncertainties are rescaled by ( 1 + x * N(lost outer hits) )
@@ -32,15 +33,16 @@ hgcTrajectoryBuilderPSet = cms.PSet(
     #     "singleHit"       = individual calo rechits; 
     #     "hitsAndClusters" = clusters if they are available, hits otherwise
     #     "clusterizing"    = start from calo rechits, but do an on-the-fly clustering the specified radius 
+    #     "singleCluster"   = individual clusters; 
     patternRecoAlgo = cms.string("singleHit"),
     clusterRadius = cms.double(1.2), ## only used for patternRecoAlgo = "clusterizing"; to be tuned
     #
     # number of candidates to propagate each step
-    maxCand = cms.uint32(1),
+    maxCand = cms.uint32(5),
     #
     # during bulding, consider as mutually exclusive two candidates that end on the same hit
     # (meaningful only if maxCand > 1, of course)
-    endpointCleaner = cms.bool(False),
+    endpointCleaner = cms.bool(True),
     #
     # at the end, pick only the single best trajectory from this track
     # (note: if not, will run the trajectoryCleaner on them)
@@ -48,7 +50,7 @@ hgcTrajectoryBuilderPSet = cms.PSet(
     #
     # parameters to choose the best track: 
     # the figure of merit is  foundHitBouns * hits - lostHitPenalty * (lost hits) - chi2
-    foundHitBonus = cms.double(20.0),
+    foundHitBonus = cms.double(30.0), ##was 20
     lostHitPenalty = cms.double(5.0),
     #
     # choice of whether to penalize for lost hits in the BH subdetector (True) or not (False)
@@ -67,7 +69,7 @@ hgcTrajectoryBuilderPSet = cms.PSet(
     minChi2ForInvalidHit = cms.double(10.),
     #
     # just use the best hit (whenever the maxCand is enforced; note: use only if maxCand == 1!)
-    bestHitOnly = cms.bool(True),
+    bestHitOnly = cms.bool(False),
 
     ##### Trajectory filter configuration
     #
@@ -79,7 +81,7 @@ hgcTrajectoryBuilderPSet = cms.PSet(
         maxConsecLostHits = cms.int32(2), # <<== important, decides when to give up on the track
         maxLostHitsFraction = cms.double(0.3),
         constantValueForLostHitsFractionFilter = cms.double(2.0),
-        minimumNumberOfHits = cms.int32(7), # <<== important, decides whether to keep the track or not
+        minimumNumberOfHits = cms.int32(7), ###was 7 before # <<== important, decides whether to keep the track or not
         chargeSignificance = cms.double(-1.0),
         maxCCCLostHits = cms.int32(9999),
         maxLostHits = cms.int32(999),

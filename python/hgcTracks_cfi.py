@@ -8,6 +8,8 @@ hgcTracks = cms.EDProducer("HGCTracking",
     ### Track collection to use for seeding
     srcTk = cms.InputTag("generalTracks"),
     cutTk = cms.string("1.48 < abs(eta) < 3.0 && pt > 0.5 && p > 1 && quality('highPurity')"),
+    #srcClusters = cms.InputTag("hgcalLayerClusters"),
+    cutSc = cms.string("1.48 < abs(eta) < 3.0"),
 
     ### Attempt a backwards refit of the HGC hits to get an unbiased track 
     doBackwardsRefit = cms.bool(False),
