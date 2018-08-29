@@ -1,7 +1,7 @@
 #ifndef RecoParticleFlow_HGCTracking_TrajectoryCleanerByBranchFilter_h
 #define RecoParticleFlow_HGCTracking_TrajectoryCleanerByBranchFilter_h
 
-/// Trajectory cleaner that merges trajectories that share at least 1 rec hit
+/// Trajectory cleaner that merges trajectories based on sharing of measurements
 
 #include <vector>
 #include <set>
@@ -24,7 +24,6 @@ class TrajectoryCleanerByBranchFilter {
  TrajectoryCleanerByBranchFilter(float foundHitBonus, float lostHitPenalty) :
   theFoundHitBonus(foundHitBonus), theLostHitPenalty(lostHitPenalty) {}
   
-  //  template<typename Traj>
   std::map<unsigned int, std::vector<TrajectoryMeasurement> > mergeTraj(const std::vector<Trajectory> &trajs);
   
  private:

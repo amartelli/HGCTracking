@@ -38,7 +38,7 @@ class HGCTrackingDiskData {
         unsigned int size() const { return index_.size(); }
         unsigned int nclusters() const { return clusterIndex_.size(); }
 
-        std::vector<TrajectoryMeasurement> measurements(TrajectoryStateOnSurface &tsos, const MeasurementEstimator &mest)  const ;
+        std::vector<TrajectoryMeasurement> measurements(TrajectoryStateOnSurface &tsos, const MeasurementEstimator &mest, bool cutSoN=false)  const ;
         std::vector<TrajectoryMeasurement> clusterizedMeasurements(TrajectoryStateOnSurface &tsos, const MeasurementEstimator &mest, float rCut) const ;
         std::vector<TrajectoryMeasurement> clusterMeasurements(TrajectoryStateOnSurface &tsos, const MeasurementEstimator &mest) const ;
 

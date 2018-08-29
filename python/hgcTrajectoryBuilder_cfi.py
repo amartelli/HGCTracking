@@ -6,6 +6,7 @@ hgcTrajectoryBuilderPSet = cms.PSet(
     srcFH = cms.InputTag("HGCalRecHit:HGCHEFRecHits"),
     srcBH = cms.InputTag("HGCalRecHit:HGCHEBRecHits"),
     ### Clusters
+    ## for visualization just clean halo hits - zero energy
     srcClusters = cms.InputTag("hgcClean2D"),
     #srcClusters = cms.InputTag("hgcalLayerClusters"),
 
@@ -54,7 +55,7 @@ hgcTrajectoryBuilderPSet = cms.PSet(
     lostHitPenalty = cms.double(5.0),
     #
     # choice of whether to penalize for lost hits in the BH subdetector (True) or not (False)
-    lostHitsOnBH = cms.bool(False),
+    lostHitsOnBH = cms.bool(True),
     #
     # allow the track to have at most N layers without hits
     maxStartingEmptyLayers = cms.uint32(2), 
@@ -91,7 +92,7 @@ hgcTrajectoryBuilderPSet = cms.PSet(
         minNumberOfHitsForLoopers = cms.int32(13),
         minNumberOfHitsPerLoop = cms.int32(4),
         extraNumberOfHitsBeforeTheFirstLoop = cms.int32(4),
-        minPt = cms.double(0.05),
+        minPt = cms.double(0.01),  ## was 0.05
         nSigmaMinPt = cms.double(5.0),
         pixelSeedExtension = cms.bool(False),
         seedExtension = cms.int32(0),

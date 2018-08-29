@@ -23,13 +23,16 @@ HGCTrackingDiskData::HGCTrackingDiskData(const edm::Handle<HGCTrackingDiskData::
     if (subdet <= 4) {
         auto range = std::equal_range(data->begin(), data->end(), HGCalDetId(ForwardSubdetector(subdet),zside,layer,0,0,0), HGCBySideAndLayer());
         for (const_iterator it = range.first; it < range.second; ++it) {
+	  //RA low S/N hits needed for MIP-like tracking - keep them!
+	  //if(it->signalOverSigmaNoise() < 5.) continue;
             index_.emplace_back(cpe_->hint(*it), it);
         }
     } else {
         for (const_iterator it = data->begin(), ed = data->end(); it != ed; ++it) {
             HcalDetId hcalid(it->id());
             if (zside == hcalid.zside() && layer == hcalid.depth()) {
-                index_.emplace_back(cpe_->hint(*it), it);
+	      //if(it->signalOverSigmaNoise() < 5.) continue;
+	      index_.emplace_back(cpe_->hint(*it), it);
             }
         }
     }
@@ -59,7 +62,7 @@ void HGCTrackingDiskData::addClusters(const edm::Handle<reco::CaloClusterCollect
     }
 }
 
-std::vector<TrajectoryMeasurement> HGCTrackingDiskData::measurements(TrajectoryStateOnSurface &tsos, const MeasurementEstimator &mest) const 
+std::vector<TrajectoryMeasurement> HGCTrackingDiskData::measurements(TrajectoryStateOnSurface &tsos, const MeasurementEstimator &mest, bool cutLowSoN) const 
 {
   bool printDEBUG = false;
 
@@ -74,6 +77,8 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::measurements(TrajectoryS
 	  if(printDEBUG)	  printf( " dist tot e' = %+7.2f    window max e' = %+7.2f ", std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)), 
 		  std::max(3.f,window + 3*pair.first.size) );
             const value_type & obj = *pair.second;
+	    //assume cutLowSoN with some criteria to be tuned
+	    if(obj.signalOverSigmaNoise() < 3. && cutLowSoN == true) continue;
             auto const & params = cpe_->localParameters(obj, tsos.surface());
             auto hitptr = std::make_shared<HGCTrackingRecHitFromHit>(obj.id(), 
                     ref_type(*alldata_, pair.second - (*alldata_)->begin()),  
@@ -88,9 +93,9 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::measurements(TrajectoryS
                 if (est_pair.second > 400) continue;
                 //printf("\t\tstate at x = %+7.2f +- %4.2f   y = %+7.2f +- %4.2f   hit at x = %+7.2f  y = %+7.2f    energy %7.3f   dist = %5.1f chi2 = %8.1f   pass = %1d ",
                 //    lp.x(), sqrt(loce.xx()), lp.y(), sqrt(loce.yy()), pair.first.x, pair.first.y, energy, hypot(lp.x()-pair.first.x,lp.y()-pair.first.y), est_pair.second, est_pair.first);
-                printf("\t\tstate at x = %+7.2f   y = %+7.2f  dxy = %4.2f   hit %12d at x = %+7.2f  y = %+7.2f    energy %7.3f   dist = %5.1f chi2 = %8.1f   pass = %1d  time = %7.3f",
+                printf("\t\tstate at x = %+7.2f   y = %+7.2f  dxy = %4.2f   hit %12d at x = %+7.2f  y = %+7.2f    energy %7.3f   dist = %5.1f chi2 = %8.1f   pass = %1d  time = %7.3f  SoverN = %5.1f",
 		       lp.x(), lp.y(), sqrt(loce.xx()+loce.yy()), pair.second->id().rawId(), pair.first.x, pair.first.y, energy, hypot(lp.x()-pair.first.x,lp.y()-pair.first.y), est_pair.second, est_pair.first, 
-		       obj.time()-5.);
+		       obj.time()-5., obj.signalOverSigmaNoise());
 		if(printDEBUG)		std::cout << " dist X = " << std::abs(lp.x() - pair.first.x) << " Y = " << std::abs(lp.y() - pair.first.y) << std::endl;
                 if (truthMap_) {
 		  auto range = truthMap_->equal_range(pair.second->id().rawId());
@@ -111,13 +116,13 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::measurements(TrajectoryS
             }
         }
 	else { 
-	  if(printDEBUG)	  printf( " SCARTATO dist tot e' = %+7.2f    window max e' = %+7.2f ", std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)),             
+	  if(printDEBUG)	  printf( " rejected-out-of-window dist tot e' = %+7.2f    window max e' = %+7.2f ", std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)),             
 		  std::max(3.f,window + 3*pair.first.size) );                                                                                                      
 	  
 	}                                                                                                                                                          
     }
     /*
-    //RA add hits not found
+    //RA add details of hits not found inside the window
     if (truthMap_) {
       std::cout << " hits >>>>  on Z = " << lp.z() << std::endl;
       std::map<uint32_t, float>::const_iterator itMX = truthMapX_->begin();
@@ -287,7 +292,7 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::clusterMeasurements(Traj
                     if (hitAndF.second == 0) continue;
                     GlobalPoint hitgp = cpe_->getPosition(hitAndF.first);
                     printf("\t\t                                                 hit %12d at x = %+7.2f  y = %+7.2f    fract.   %5.3f   dist = %5.1f                            ",
-                            hitAndF.first.rawId(), hitgp.x(), hitgp.y(), hitAndF.second, hypot(lp.x()-hitgp.x(),lp.y()-hitgp.y()));
+			   hitAndF.first.rawId(), hitgp.x(), hitgp.y(), hitAndF.second, hypot(lp.x()-hitgp.x(),lp.y()-hitgp.y()));
                     if (truthMap_) {
                         auto range = truthMap_->equal_range(hitAndF.first.rawId());
                         for (; range.first != range.second; ++range.first) {
@@ -305,14 +310,14 @@ std::vector<TrajectoryMeasurement> HGCTrackingDiskData::clusterMeasurements(Traj
             }
         }
 	else {
-	  if(printDEBUG)	  printf( " SCARTATO dist tot e' = %+7.2f    window max e' = %+7.2f ", std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)),
+	  if(printDEBUG)	  printf( " rejected-out-of-window dist tot e' = %+7.2f    window max e' = %+7.2f ", std::max(std::abs(lp.x()-pair.first.x), std::abs(lp.y()-pair.first.y)),
                   std::max(3.f,window + 3*pair.first.size) );
 
 	}
     }
 
     /*
-    //RA add hits not found                                                                                                                                                                 
+    //RA add details of hits not found inside the window 
     if (truthMap_) {
       std::cout << " cluster >>>>  on Z = " << lp.z() << std::endl;
       std::map<uint32_t, float>::const_iterator itMX = truthMapX_->begin();

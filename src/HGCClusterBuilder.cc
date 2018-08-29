@@ -7,134 +7,133 @@ HGCClusterBuilder::HGCClusterBuilder():
   seedL_m(-1), nUnits_m(-1), energyFromSeed_m(-1)
 { }
 */
+
 HGCClusterBuilder::HGCClusterBuilder():
-  Lsum(0), Esum(0), Ssum(0), Nlayers(0), 
-  Emean(0), Smean(0), Lmean(0), 
-  aE(0), bE(0), aS(0), bS(0){ 
-  energyTot_m.fill(0.);
-  sizeTot_m.fill(0);
-  layerOK_m.fill(0);
-  layer_m = 0;
-  seedL_m = 0; 
-  nUnits_m.fill(0); 
-  energyFromSeed_m.fill(0);
+  is2DClSeed(0), seedEnergy(0), seedSize(0), seedLayer(0),
+  nValidMeas(0),
+  Esum(0), Ssum(0), Lsum(0),
+  Emean(0), Smean(0), Lmean(0),
+  aE(0), bE(0), aS(0), bS(0){
+  energyL.fill(0.);
+  sizeL.fill(0);
 }
 
 
-void HGCClusterBuilder::initState(float energy, float size, int L){
-  
-  energyTot_m[L-1] = energy;
-  sizeTot_m[L-1] = size; 
-  layerOK_m[L-1] = 1;
-  layer_m = L;
-  seedL_m = L;
-  nUnits_m[L-1] = 1;
-  energyFromSeed_m[L-1] = energy;
+void HGCClusterBuilder::initState(float energy, float size, int L, bool kSeed){ 
+  is2DClSeed = kSeed;
 
-  Nlayers += 1;
+  seedEnergy = energy;
+  seedLayer = L;
+  seedSize = size;
+
+  if(kSeed == false) return;
+
+  // to cross-check if gets double counted
+  energyL[L-1] = energy;
+  sizeL[L-1] = size; 
+  nValidMeas.push_back(L);
+
   Esum += energy;
-  Lsum += L;
   Ssum += size;
-  /*
-  energyTot_m = energy;
-  sizeTot_m = size; 
-  layer_m = L;
-  seedL_m = L;
-  nUnits_m = 1;
-  energyFromSeed_m = energy;
-  */
+  Lsum += L;
 
-  //std::cout << " >>  initState energyTot_m = " << energyTot_m  << std::endl;
+  nValidMeas.push_back(L);
 }
 
-
+/*
 float HGCClusterBuilder::getEvoCumulE(int layer ){
   float totE = 0;
   for(int ij=seedL_m-1; ij<layer; ++ij) totE += energyTot_m[ij];
   return totE;
 }
+*/
 
 
-void HGCClusterBuilder::evolveState(float energy, float size, int layer, unsigned int nUnits){
-  //  std::cout << " evolveState startE = " << energyTot_m << std::endl;
+void HGCClusterBuilder::evolveState(float energy, float size, int layer){
   if(energy == 0) return;
 
-  //do not increase if filling same layer with different starting point
-  if(layerOK_m[layer-1] == 0){
-    Nlayers += 1;
-    Lsum += layer;
+  if(layer == seedLayer){
+    //do not increase if filling same layer with different starting point
+    if(std::find(nValidMeas.begin(), nValidMeas.end(), layer) == nValidMeas.end()){
+      nValidMeas.push_back(layer);
+      Lsum += layer;
+    }
+    
+    Esum += energy;
+    Ssum += size;
+    
+    energyL[layer-1] += energy;
+    sizeL[layer-1] += size;
   }
-  Esum += energy;
-  Ssum += size;
 
-  energyTot_m[layer-1] += energy;
-  sizeTot_m[layer-1] += size;
-  layerOK_m[layer-1] = 1;
-  layer_m = layer;
-  nUnits_m[layer-1] += nUnits;
-  for(int ij=seedL_m-1; ij<layer; ++ij) energyFromSeed_m[ij] += energy;
-
-  updateEvolution(layer);
-
-  //  std::cout << " evolveState endE = " << energyTot_m << std::endl;
+  //std::cout << " Esum = " << Esum << " energyL[layer-1] = " << energyL[layer-1] << " nValidMeas.size() = " << nValidMeas.size()  << std::endl;
+  //std::cout << " >>> now updateEvolution " << std::endl;
+  updateEvolution();
 }
 
 
-void HGCClusterBuilder::updateEvolution(int layer){
+void HGCClusterBuilder::updateEvolution(){
+  if(nValidMeas.size() < 3) return;
 
-  //  std::cout << " updateEvolution layers filled = " << layer - seedL_m << std::endl;
-  if(Nlayers < 2) return;
-
-  float OneoverN = 1./Nlayers;
+  float OneoverN = 1./nValidMeas.size();
 
   Emean = Esum*OneoverN;
   Smean = Ssum*OneoverN;
   Lmean = Lsum*OneoverN;
-
-  float xYE = 0;  
+  float xYE = 0;
   float xYS = 0;
   float xxL = 0;
 
-  for(int ij=seedL_m; ij<=layer; ++ij){
-    if(layerOK_m[ij-1] == 0) continue;
-    //    std::cout << " layer ok = " << ij << std::endl;
-    xYE += (energyTot_m[ij-1] - Emean) * (ij - Lmean); 
-    xYS += (sizeTot_m[ij-1] - Smean) * (ij - Lmean); 
-    xxL += (ij - Lmean)*(ij - Lmean);
+  for(unsigned int it = nValidMeas.size()-3; it < nValidMeas.size(); ++it){
+    int lVal = nValidMeas.at(it);
+    xYE += (energyL[lVal] - Emean) * (lVal - Lmean);
+    xYS += (sizeL[lVal] - Smean) * (lVal - Lmean);
+    xxL += (lVal - Lmean)*(lVal - Lmean);
   }
 
   xYE = xYE*OneoverN;
-  xYS = xYS*OneoverN;  
+  xYS = xYS*OneoverN;
   xxL = xxL*OneoverN;
 
   bE = xYE/xxL;
   aE = Emean - bE * Lmean;
-
   bS = xYS/xxL;
   aS = Smean - bS * Lmean;
+}
 
-  // std::cout << " Emean = " << Emean << " Smean = " << Smean << " Lmean = " << Lmean << std::endl;
-  // std::cout << " aE = " << aE << " bE = " << bE << " aS = " << aS << " bS = " << bS << std::endl;
+std::pair<float, float> HGCClusterBuilder::evaluateESChi2(float sumEL, float sumSL, int layer, int originL, int originSize){
 
-};
+  std::cout << " in HGCClusterBuilder::evaluateESChi2 layer = " << layer << " nValidMeas.size() = " << nValidMeas.size()
+            << "  energyL[layer-2] = " << energyL[layer-2] << " energyL[layer-1] = " <<energyL[layer-1]
+            << " evoState->getSeedEnergy() = " << seedEnergy << std::endl;
 
 
+  if(nValidMeas.size() == 0) return std::pair<float, float>(0, 0);
+  else if(nValidMeas.size() < 3) return std::pair<float, float>(energyL[layer-2], sizeL[layer-2]);
+  //  else if(nValidMeas.size() < 3) return std::pair<float, float>(evoState->getSeedEnergy(), evoState->getSeedSize());
+  float expE = aE + bE * layer;
+  float expS = aS + bS * layer;
 
-float HGCClusterBuilder::evaluateESChi2(float sumEL, float sumSL, int layer, int originL, int originSize){
+  std::cout << " >>> expE = " << expE  << " expS = " << expS << std::endl;
 
+
+  return  std::pair<float, float>(expE, expS);
+
+
+  /*
   if(Nlayers < 2) {
     //    std::cout << " first layers -- " << std::endl;
-    float expE = (sumEL - energyTot_m[seedL_m-1] ) / energyTot_m[seedL_m-1];
-    float expS = (sumSL - sizeTot_m[seedL_m-1] ) / sizeTot_m[seedL_m-1];
+    float expE = (sumEL - energyL[seedLayer-1] ) / energyL[seedL_m-1];
+    float expS = (sumSL - sizeL[seedLayer-1] ) / sizeL[seedL_m-1];
     return expE*expE + expS*expS;
   }
 
   float expE = aE + bE * layer;
   float expS = aS + bS * layer;
 
-  if((expE < 0 || expS < 0) && energyTot_m[originL-1] > 0){
-    float expE = (sumEL - energyTot_m[originL-1] ) / energyTot_m[originL-1];
-    float expS = (sumSL - sizeTot_m[originL-1] ) / sizeTot_m[originL-1];
+  if((expE < 0 || expS < 0) && energyL[originL-1] > 0){
+    float expE = (sumEL - energyL[originL-1] ) / energyTot_m[originL-1];
+    float expS = (sumSL - sizeL[originL-1] ) / sizeTot_m[originL-1];
     //    std::cout << " exp neg before ok " << std::endl;
     return expE*expE + expS*expS;
   }
@@ -157,12 +156,12 @@ float HGCClusterBuilder::evaluateESChi2(float sumEL, float sumSL, int layer, int
 
   //  std::cout << " >>> Echi2 = " << Echi2 << " Schi2 = " << Schi2 << " quad sum = " << Echi2*Echi2 +Schi2*Schi2 << std::endl;
 
-  /*
-  if(energyTot_m[layer-1] == 0. || sizeTot_m[layer-1] == 0) {
-    throw cms::Exception("Configuration") << " Empty starting state for HGCClusterBuilder energyTot_m = " 
-					  << energyTot_m[layer-1] << " sizeTot_m = " << sizeTot_m[layer-1] << " \n ";
-  }
-  */
+ 
+  // if(energyTot_m[layer-1] == 0. || sizeTot_m[layer-1] == 0) {
+  //   throw cms::Exception("Configuration") << " Empty starting state for HGCClusterBuilder energyTot_m = " 
+  // 					  << energyTot_m[layer-1] << " sizeTot_m = " << sizeTot_m[layer-1] << " \n ";
+  // }
+ 
 
   // float Echi2 = 1.;
   //  float Echi2 = (nUnits_m[prevLayer-1] != 0) ? (expectedE - sumEL)/nUnits_m[prevLayer-1] : (expectedE - sumEL)/sumSL;
@@ -171,5 +170,6 @@ float HGCClusterBuilder::evaluateESChi2(float sumEL, float sumSL, int layer, int
   //  float totalChi = (layer < 35 || layer - seedL_m < 20)? Echi2+Schi2 : std::abs(Echi2)+std::abs(Schi2);
   //return totalChi;
   return Echi2*Echi2 +Schi2*Schi2;
-
+  */
 }
+

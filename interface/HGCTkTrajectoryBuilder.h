@@ -23,7 +23,6 @@
 #include "RecoParticleFlow/HGCTracking/interface/HGCTracker.h"
 #include "RecoParticleFlow/HGCTracking/interface/HGCTrackingBasicCPE.h"
 #include "RecoParticleFlow/HGCTracking/interface/TrajectoryCleanerBySharedEndpoints.h"
-//#include "RecoParticleFlow/HGCTracking/interface/TrajectoryCleanerByBranchFilter.h"
 #include "RecoParticleFlow/HGCTracking/interface/HGCTrackingData.h"
 #include "RecoParticleFlow/HGCTracking/interface/hgcdebug.h"
 
@@ -31,16 +30,6 @@
 
 #include "RecoParticleFlow/HGCTracking/interface/HGCClusterBuilder.h"
 
-//monitor evolution
-/*
-struct evolutionState{ 
-float energyTot; 
-float sizeTot; 
-//LocalPoint avgPos; 
-int layer; 
-int nUnits; 
-} evoState; 
-*/
 
 class HGCTkTrajectoryBuilder {
     public:
@@ -78,6 +67,12 @@ class HGCTkTrajectoryBuilder {
         void printTraj(const TempTrajectory &traj) const { printTraj_(traj); }
         std::vector<std::pair<const CaloParticle *, float>> truthMatch(const Trajectory &traj) const { return truthMatch_(traj); }
         std::vector<std::pair<const CaloParticle *, float>> truthMatch(const TempTrajectory &traj) const { return truthMatch_(traj); }
+
+	//RA horrible solution to propagate in parallel track and calo state
+	//still profiting from the tracking tools - only for the track state part
+	std::vector<TempTrajectory> getTempTrajVec(std::vector<TempCaloTrajectory> tmpCT) const;
+	std::vector<TempCaloTrajectory> getTempCaloTrajVec(std::vector<TempCaloTrajectory> tmpCaloTraj, std::vector<TempTrajectory> tmpTraj) const; 
+
 
     protected:
         enum PatternRecoAlgo { SingleHitAlgo, ClusterizingAlgo, MixedAlgo, SingleClusterAlgo };
@@ -133,12 +128,17 @@ class HGCTkTrajectoryBuilder {
 
         /// --- Pattern reco ---
         template<class Start>
-	  std::vector<TempTrajectory> advanceOneLayer(float startE, int startS, int seedLayer, const Start &start, const TempTrajectory &traj, const HGCDiskGeomDet *disk, bool bestHitOnly) const ;
+	  //std::vector<TempTrajectory> advanceOneLayer(float startE, int startS, int seedLayer, const Start &start, const TempTrajectory &traj, const HGCDiskGeomDet *disk, bool bestHitOnly) const ;
+	  std::vector<TempCaloTrajectory> advanceOneLayer(float startE, int startS, int seedLayer, const Start &start, const TempCaloTrajectory &traj, const HGCDiskGeomDet *disk, bool bestHitOnly) const ;
 
         /// --- Utilities ---
         void trim(std::vector<TempTrajectory> &tempTrajectories) const {
             tempTrajectories.erase(std::remove_if( tempTrajectories.begin(),tempTrajectories.end(), std::not1(std::mem_fun_ref(&TempTrajectory::isValid))), tempTrajectories.end());
         }
+        void trim(std::vector<TempCaloTrajectory> &tempCaloTrajectories) const {
+            tempCaloTrajectories.erase(std::remove_if( tempCaloTrajectories.begin(),tempCaloTrajectories.end(), std::not1(std::mem_fun_ref(&TempCaloTrajectory::isValid))), tempCaloTrajectories.end());
+        }
+
         void trim(std::vector<Trajectory> &trajectories) const {
             trajectories.erase(std::remove_if( trajectories.begin(),trajectories.end(), std::not1(std::mem_fun_ref(&Trajectory::isValid))), trajectories.end());
         }
@@ -150,39 +150,8 @@ class HGCTkTrajectoryBuilder {
 
 	bool printDEBUG;
 	
+	//link to the calo state
 	HGCClusterBuilder* evoState;
-
-	/*
-	void initState(evolutionState state){
-	  state.energyTot = 0.;
-	  state.sizeTot = 0;
-	  //LocalPoint avgPos
-	  state.layer = -1;
-	  state.seedL = evoState.seedL;
-	  state.unit = 0;
-	}
-	*/
-
-	/*
-	mutable struct evolutionState{      
-	  float energyTot;            
-	  float sizeTot;              
-	  //LocalPoint avgPos;        
-	  int layer;                  
-	  int seedL;                  
-	  unsigned int nUnits;                 
-	  float energyFromSeed;            
-	} evoState;                 
-	*/
-
-	/*	
-	//evolutionState startingState;
-	mutable float evoS_energyTot;
-	mutable float evoS_sizeTot;
-	//LocalPoint avgPos; 
-	mutable int evoS_layer;
-	mutable int evoS_nUnits;
-	*/
 
 };
 
