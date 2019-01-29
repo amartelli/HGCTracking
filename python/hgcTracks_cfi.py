@@ -1,6 +1,6 @@
 import FWCore.ParameterSet.Config as cms
 
-from RecoParticleFlow.HGCTracking.hgcTrajectoryBuilder_cfi import *
+from RecoHGCal.HGCTracking.hgcTrajectoryBuilder_cfi import *
 
 hgcTracks = cms.EDProducer("HGCTracking",
     hgcTrajectoryBuilderPSet,

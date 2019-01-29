@@ -1,5 +1,5 @@
-#ifndef RecoParticleFlow_HGCTracking_TrajectorySeedFromTrack_h
-#define RecoParticleFlow_HGCTracking_TrajectorySeedFromTrack_h
+#ifndef RecoHGCal_HGCTracking_TrajectorySeedFromTrack_h
+#define RecoHGCal_HGCTracking_TrajectorySeedFromTrack_h
 
 /// Basic class  for a TrajectorySeed made from a reco::Track.
 //  FIXME: not HGC specific, so should go in DataFormats/TrajectorySeed or similar

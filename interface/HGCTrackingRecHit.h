@@ -1,5 +1,5 @@
-#ifndef RecoParticleFlow_HGCTracking_HGCTrackingRecHit_h
-#define RecoParticleFlow_HGCTracking_HGCTrackingRecHit_h
+#ifndef RecoHGCal_HGCTracking_HGCTrackingRecHit_h
+#define RecoHGCal_HGCTracking_HGCTrackingRecHit_h
 
 /// Basic template class for a RecHit wrapping a Ref to an object
 

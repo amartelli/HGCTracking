@@ -1,5 +1,5 @@
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingRecHit.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingClusteringRecHit.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingRecHit.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingClusteringRecHit.h"
 
 template<>
 bool HGCTrackingRecHit<HGCRecHitRef>::sharesInput( const TrackingRecHit* other, SharedInputType what) const 

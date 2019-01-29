@@ -10,13 +10,15 @@
 #include <iostream>
 #include <cmath>
 
+#include "DataFormats/ForwardDetId/interface/HGCScintillatorDetId.h"
+#include "DataFormats/ForwardDetId/interface/HGCSiliconDetId.h"
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "SimDataFormats/CaloAnalysis/interface/SimCluster.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingRecHit.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingClusteringRecHit.h"
-#include "RecoParticleFlow/HGCTracking/interface/TrajectorySeedFromTrack.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTkTrajectoryBuilder.h"
-#include "RecoParticleFlow/HGCTracking/interface/hgcdebug.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingRecHit.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingClusteringRecHit.h"
+#include "RecoHGCal/HGCTracking/interface/TrajectorySeedFromTrack.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTkTrajectoryBuilder.h"
+#include "RecoHGCal/HGCTracking/interface/hgcdebug.h"
 
 #include "CommonTools/Utils/interface/StringCutObjectSelector.h"
 #include "FWCore/Framework/interface/stream/EDProducer.h"
@@ -40,7 +42,7 @@ class HGCTracking : public edm::stream::EDProducer<> {
         const bool doBackwardsRefit_;
 
         /// for the debug output
-        const edm::EDGetTokenT<HGCRecHitCollection> srcEE_, srcFH_, srcBH_;
+        const edm::EDGetTokenT<HGCRecHitCollection> srcEE_, srcFH_;  //, srcBH_;
 
         /// for debugging
         const bool hasMCTruth_;
@@ -60,7 +62,7 @@ HGCTracking::HGCTracking(const edm::ParameterSet& ps) :
     doBackwardsRefit_(ps.getParameter<bool>("doBackwardsRefit")),
     srcEE_(consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcEE"))),
     srcFH_(consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcFH"))),
-    srcBH_(consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcBH"))),
+    //srcBH_(consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcBH"))),
     hasMCTruth_(ps.existsAs<edm::InputTag>("srcTruth")),
     srcTruth_(hasMCTruth_ ? consumes<std::vector<CaloParticle>>(ps.getParameter<edm::InputTag>("srcTruth")) : edm::EDGetTokenT<std::vector<CaloParticle>>())
 {
@@ -71,7 +73,7 @@ HGCTracking::HGCTracking(const edm::ParameterSet& ps) :
     if (hgctracking::g_debuglevel > 0) {
         produces<std::vector<reco::CaloCluster>>("EE");
         produces<std::vector<reco::CaloCluster>>("FH");
-        produces<std::vector<reco::CaloCluster>>("BH");
+        //produces<std::vector<reco::CaloCluster>>("BH");
     }
 }
 
@@ -94,7 +96,8 @@ HGCTracking::produce(edm::Event& evt, const edm::EventSetup& es)
                 //printf("    simcluster pt %7.1f eta %+5.2f phi %+5.2f rechits %4d simhits %d \n",
                 //    scr->pt(), scr->eta(), scr->phi(), scr->numberOfRecHits(), scr->numberOfSimHits());
                 for (const auto & pair : scr->hits_and_fractions()) {
-                    revTruthMap_.emplace(pair.first, std::make_pair(&p, pair.second));
+		    if(HGCalDetId(pair.first).det() == 10) continue;
+		    revTruthMap_.emplace(pair.first, std::make_pair(&p, pair.second));
                 }
             }
         }
@@ -103,13 +106,13 @@ HGCTracking::produce(edm::Event& evt, const edm::EventSetup& es)
     
 
     if (hgctracking::g_debuglevel > 0) {
-        edm::Handle<HGCRecHitCollection> srcEE, srcFH, srcBH;
+      edm::Handle<HGCRecHitCollection> srcEE, srcFH; //, srcBH;
         evt.getByToken(srcEE_, srcEE); 
         evt.getByToken(srcFH_, srcFH); 
-        evt.getByToken(srcBH_, srcBH); 
+        //evt.getByToken(srcBH_, srcBH); 
         writeAllHitsByLayer(*srcEE, evt, "EE", 28);
-        writeAllHitsByLayer(*srcFH, evt, "FH", 12);
-        writeAllHitsByLayer(*srcBH, evt, "BH", 12);
+        writeAllHitsByLayer(*srcFH, evt, "FH", 24);
+        //writeAllHitsByLayer(*srcBH, evt, "BH", 12);
     }
 
     // Get tracks
@@ -252,18 +255,21 @@ void HGCTracking::makeOutput(const std::vector<Trajectory> &trajs, edm::Event &o
         reco::Track trk(t.chiSquared(), t.foundHits()*2, hits.position(),
                         reco::Track::Vector(mom.x(), mom.y(), mom.z()), q, reco::Track::CovarianceMatrix());
         for (const auto & tm : t.measurements()) {
-            int subdet = 5, layer = 0;
-            if (tm.recHit()->geographicalId().det() == DetId::Forward) {
-                subdet = tm.recHit()->geographicalId().subdetId();
-                layer = HGCalDetId(tm.recHit()->geographicalId()).layer();
-            } else {
-                layer = HcalDetId(tm.recHit()->geographicalId()).depth();
-            }
+	    // int subdet = 5, layer = 0;
+            // if (tm.recHit()->geographicalId().det() == DetId::Forward) {
+            //     subdet = tm.recHit()->geographicalId().subdetId();
+            //     layer = HGCalDetId(tm.recHit()->geographicalId()).layer();
+            // } else {
+            //     layer = HcalDetId(tm.recHit()->geographicalId()).depth();
+            // }
+	    int subdet = tm.recHit()->geographicalId().det();
+	    int layer = HGCalDetId(tm.recHit()->geographicalId()).layer();
+
             // convert subdet to something representable in a hitpattern
             switch (subdet) {
-                case 3: subdet = PixelSubdetector::PixelEndcap; break;
-                case 4: subdet = StripSubdetector::TID; break;
-                case 5: subdet = StripSubdetector::TEC; break;
+                case 8: subdet = PixelSubdetector::PixelEndcap; break;
+                case 9: subdet = StripSubdetector::TID; break;
+                case 10: subdet = StripSubdetector::TEC; break;
             }
             trk.appendTrackerHitPattern(subdet, layer/2, layer%2, tm.recHit()->type());
         }
@@ -295,13 +301,23 @@ void HGCTracking::writeAllHitsByLayer(const HGCRecHitCollection &hits, edm::Even
 
     for (const HGCRecHit &hit : hits) {
         int zside, layer;
-        if (hit.id().det() == DetId::Forward) {
-            HGCalDetId parsed(hit.id());
-            zside = parsed.zside(); layer = parsed.layer();
-        } else {
-            HcalDetId parsed(hit.id());
-            zside = parsed.zside(); layer = parsed.depth();
-        }
+        // if (hit.id().det() == DetId::Forward) {
+        //     HGCalDetId parsed(hit.id());
+        //     zside = parsed.zside(); layer = parsed.layer();
+        // } else {
+        //     HcalDetId parsed(hit.id());
+        //     zside = parsed.zside(); layer = parsed.depth();
+        // }
+	if (hit.id().det() == DetId::HGCalEE){
+	  layer = HGCSiliconDetId(hit.id()).layer();
+	  zside = HGCSiliconDetId(hit.id()).zside();
+	} else if(hit.id().det() == DetId::HGCalHSi) {
+	  layer = HGCSiliconDetId(hit.id()).layer();
+	  zside = HGCSiliconDetId(hit.id()).zside();
+	} else if (hit.id().det() == DetId::HGCalHSc) {
+	  layer = HGCScintillatorDetId(hit.id()).layer();
+	  zside = HGCScintillatorDetId(hit.id()).zside();
+	}
         (*outCl)[(zside>0)+2*(layer-1)].addHitAndFraction(hit.id(), 1.0);
     }
     for (int ilayer = 0; ilayer < layers; ++ilayer) {

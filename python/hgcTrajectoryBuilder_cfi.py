@@ -4,7 +4,7 @@ hgcTrajectoryBuilderPSet = cms.PSet(
     ### RecHit collections
     srcEE = cms.InputTag("HGCalRecHit:HGCEERecHits"),
     srcFH = cms.InputTag("HGCalRecHit:HGCHEFRecHits"),
-    srcBH = cms.InputTag("HGCalRecHit:HGCHEBRecHits"),
+    #srcBH = cms.InputTag("HGCalRecHit:HGCHEBRecHits"),
     ### Clusters
     srcClusters = cms.InputTag("hgcalLayerClusters"),
 

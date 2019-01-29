@@ -1,5 +1,5 @@
-#include "RecoParticleFlow/HGCTracking/interface/HGCTkTrajectoryBuilder.h"
-#include "RecoParticleFlow/HGCTracking/interface/TrajectorySeedFromTrack.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTkTrajectoryBuilder.h"
+#include "RecoHGCal/HGCTracking/interface/TrajectorySeedFromTrack.h"
 
 #include "DataFormats/Common/interface/Handle.h"
 #include "DataFormats/TrackReco/interface/Track.h"
@@ -29,7 +29,7 @@
 HGCTkTrajectoryBuilder::HGCTkTrajectoryBuilder(const edm::ParameterSet& ps, edm::ConsumesCollector && c ) :
     srcEE_(c.consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcEE"))),
     srcFH_(c.consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcFH"))),
-    srcBH_(c.consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcBH"))),
+    //srcBH_(c.consumes<HGCRecHitCollection>(ps.getParameter<edm::InputTag>("srcBH"))),
     srcClusters_(c.consumes<reco::CaloClusterCollection>(ps.getParameter<edm::InputTag>("srcClusters"))),
     propName_(ps.getParameter<std::string>("propagator")),
     propNameOppo_(ps.getParameter<std::string>("propagatorOpposite")),
@@ -90,9 +90,9 @@ HGCTkTrajectoryBuilder::init(const edm::Event& evt, const edm::EventSetup& es)
 
     data_.reset(new HGCTrackingData(*hgcTracker_, &*cpe_));
 
-    evt.getByToken(srcEE_, srcEE); data_->addData(srcEE, 3);
-    evt.getByToken(srcFH_, srcFH); data_->addData(srcFH, 4);
-    evt.getByToken(srcBH_, srcBH); data_->addData(srcBH, 5);
+    evt.getByToken(srcEE_, srcEE); data_->addData(srcEE, 8);
+    evt.getByToken(srcFH_, srcFH); data_->addData(srcFH, 9);
+    //evt.getByToken(srcBH_, srcBH); data_->addData(srcBH, 10);
 
     evt.getByToken(srcClusters_, srcClusters); 
     data_->addClusters(srcClusters);
@@ -318,7 +318,7 @@ HGCTkTrajectoryBuilder::advanceOneLayer(const Start &start, const TempTrajectory
             return ret;
         }
     }
-    auto missing = (disk->subdet() != 5 || lostHitsOnBH_) ? TrackingRecHit::missing : TrackingRecHit::inactive;
+    auto missing = (disk->subdet() != 10 || lostHitsOnBH_) ? TrackingRecHit::missing : TrackingRecHit::inactive;
     ret.push_back(traj.foundHits() ? traj : TempTrajectory(traj.direction(),0)); // either just one lost hit, or a trajectory not starting on a lost hit
     ret.back().push(TrajectoryMeasurement(tsos, std::make_shared<InvalidTrackingRecHit>(*disk, missing)));
     return ret;

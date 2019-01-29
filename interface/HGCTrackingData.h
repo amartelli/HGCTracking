@@ -1,8 +1,8 @@
-#ifndef RecoParticleFlow_HGCTracking_interface_HGCTrackingData_h
-#define RecoParticleFlow_HGCTracking_interface_HGCTrackingData_h
+#ifndef RecoHGCal_HGCTracking_interface_HGCTrackingData_h
+#define RecoHGCal_HGCTracking_interface_HGCTrackingData_h
 
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingDiskData.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTracker.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingDiskData.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTracker.h"
 #include <map>
 
 /// Class that holds the rechits of HGC Layer, and does the lookup

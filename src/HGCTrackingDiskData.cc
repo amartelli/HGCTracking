@@ -1,18 +1,24 @@
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingDiskData.h"
-#include "RecoParticleFlow/HGCTracking/interface/hgcdebug.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingDiskData.h"
+#include "RecoHGCal/HGCTracking/interface/hgcdebug.h"
 
 namespace {
-        struct HGCBySideAndLayer {
-            bool operator()(const HGCRecHit &hit1, const HGCRecHit &hit2) const { return comp(HGCalDetId(hit1.id()), HGCalDetId(hit2.id())); }
-            bool operator()(HGCalDetId id1, const HGCRecHit &hit2) const { return comp(id1, HGCalDetId(hit2.id())); }
-            bool operator()(const HGCRecHit &hit1, HGCalDetId id2) const { return comp(HGCalDetId(hit1.id()),id2); }
-            bool comp(HGCalDetId id1, HGCalDetId id2) const {
-                if (id1.subdetId() != id2.subdetId() || id1.zside() != id2.zside()) {
-                    return id1 < id2;
-                }
-                return id1.layer() < id2.layer();
-            }
-        };
+           struct HGCBySideAndLayer {
+        //     bool operator()(const HGCRecHit &hit1, const HGCRecHit &hit2) const { return comp(HGCalDetId(hit1.id()), HGCalDetId(hit2.id())); }
+        //     bool operator()(HGCalDetId id1, const HGCRecHit &hit2) const { return comp(id1, HGCalDetId(hit2.id())); }
+        //     bool operator()(const HGCRecHit &hit1, HGCalDetId id2) const { return comp(HGCalDetId(hit1.id()),id2); }
+        //     bool comp(HGCalDetId id1, HGCalDetId id2) const {
+	       bool operator()(const HGCRecHit &hit1, const HGCRecHit &hit2) const {
+	         return comp(HGCSiliconDetId(hit1.id()), HGCSiliconDetId(hit2.id())); }
+	       bool operator()(HGCSiliconDetId id1, const HGCRecHit &hit2) const { return comp(id1, HGCSiliconDetId(hit2.id())); }
+	       bool operator()(const HGCRecHit &hit1, HGCSiliconDetId id2) const { return comp(HGCSiliconDetId(hit1.id()),id2); }
+	       bool comp(HGCSiliconDetId id1, HGCSiliconDetId id2) const {
+		 if (id1.subdetId() != id2.subdetId() || id1.zside() != id2.zside()) {
+		   return id1 < id2;
+		 }
+		 return id1.layer() < id2.layer();
+	       }
+	   };
+
 }
 
 HGCTrackingDiskData::HGCTrackingDiskData(const edm::Handle<HGCTrackingDiskData::TColl> &data, int subdet, int zside, int layer, const HGCTrackingBasicCPE *cpe) :
@@ -20,19 +26,20 @@ HGCTrackingDiskData::HGCTrackingDiskData(const edm::Handle<HGCTrackingDiskData::
     cpe_(cpe),truthMap_(0)
 {
     index_.clear();
-    if (subdet <= 4) {
-        auto range = std::equal_range(data->begin(), data->end(), HGCalDetId(ForwardSubdetector(subdet),zside,layer,0,0,0), HGCBySideAndLayer());
-        for (const_iterator it = range.first; it < range.second; ++it) {
-            index_.emplace_back(cpe_->hint(*it), it);
-        }
-    } else {
-        for (const_iterator it = data->begin(), ed = data->end(); it != ed; ++it) {
-            HcalDetId hcalid(it->id());
-            if (zside == hcalid.zside() && layer == hcalid.depth()) {
-                index_.emplace_back(cpe_->hint(*it), it);
-            }
-        }
+    //if (subdet <= 4) {
+    //auto range = std::equal_range(data->begin(), data->end(), HGCalDetId(ForwardSubdetector(subdet),zside,layer,0,0,0), HGCBySideAndLayer());
+    auto range = std::equal_range(data->begin(), data->end(), HGCSiliconDetId(DetId::Detector(subdet), zside, 0, layer, 0, 0, 0, 0), HGCBySideAndLayer());
+    for (const_iterator it = range.first; it < range.second; ++it) {
+      index_.emplace_back(cpe_->hint(*it), it);
     }
+    // } else {
+    //     for (const_iterator it = data->begin(), ed = data->end(); it != ed; ++it) {
+    //         HcalDetId hcalid(it->id());
+    //         if (zside == hcalid.zside() && layer == hcalid.depth()) {
+    //             index_.emplace_back(cpe_->hint(*it), it);
+    //         }
+    //     }
+    // }
     buildIndex_();
 }
 
@@ -42,19 +49,20 @@ void HGCTrackingDiskData::addClusters(const edm::Handle<reco::CaloClusterCollect
     clusterIndex_.clear();
     for (reco::CaloClusterCollection::const_iterator it = data->begin(), ed = data->end(); it != ed; ++it) {
         DetId firstid = it->hitsAndFractions().front().first;
-        if (firstid.det() == DetId::Forward) {
-            if (firstid.subdetId() != subdet) continue;
-            HGCalDetId parsed(firstid);
-            if (parsed.zside() != zside || parsed.layer() != layer) {
-                continue;
-            }
-        } else if (firstid.det() == DetId::Hcal) {
-            if (subdet != 5) continue;
-            HcalDetId parsed(firstid);
-            if (parsed.zside() != zside || parsed.depth() != layer) {
-                continue;
-            }
-        }
+	// if (firstid.det() == DetId::Forward) {
+	if (firstid.det() == DetId::HGCalHSc) continue;
+	if (firstid.subdetId() != subdet) continue;
+	HGCalDetId parsed(firstid);
+	if (parsed.zside() != zside || parsed.layer() != layer) {
+	  continue;
+	}
+        // } else if (firstid.det() == DetId::Hcal) {
+        //     if (subdet != 5) continue;
+        //     HcalDetId parsed(firstid);
+        //     if (parsed.zside() != zside || parsed.depth() != layer) {
+        //         continue;
+        //     }
+        // }
         clusterIndex_.emplace_back(cpe_->hint(*it), it);
     }
 }

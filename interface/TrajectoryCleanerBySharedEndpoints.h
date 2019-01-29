@@ -1,5 +1,5 @@
-#ifndef RecoParticleFlow_HGCTracking_TrajectoryCleanerBySharedEndpoints_h
-#define RecoParticleFlow_HGCTracking_TrajectoryCleanerBySharedEndpoints_h
+#ifndef RecoHGCal_HGCTracking_TrajectoryCleanerBySharedEndpoints_h
+#define RecoHGCal_HGCTracking_TrajectoryCleanerBySharedEndpoints_h
 
 /// Trajectory cleaner that merges trajectories that share the last rec hit
 //  Could become a real TrajectoryCleaner with some effort

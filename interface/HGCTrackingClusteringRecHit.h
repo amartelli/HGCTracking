@@ -1,5 +1,5 @@
-#ifndef RecoParticleFlow_HGCTracking_HGCTrackingClusteringRecHit_h
-#define RecoParticleFlow_HGCTracking_HGCTrackingClusteringRecHit_h
+#ifndef RecoHGCal_HGCTracking_HGCTrackingClusteringRecHit_h
+#define RecoHGCal_HGCTracking_HGCTrackingClusteringRecHit_h
 
 /// Class for a TrackingRecHit made from an on-the-fly clustering of HGCRecHits
 

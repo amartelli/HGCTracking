@@ -1,5 +1,5 @@
-#ifndef RecoParticleFlow_HGCTracking_hgcdebug_h
-#define RecoParticleFlow_HGCTracking_hgcdebug_h
+#ifndef RecoHGCal_HGCTracking_hgcdebug_h
+#define RecoHGCal_HGCTracking_hgcdebug_h
 
 #include "SimDataFormats/CaloAnalysis/interface/CaloParticle.h"
 

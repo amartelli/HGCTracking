@@ -9,4 +9,4 @@ hitCollectorHGC = TrackingTools.KalmanUpdators.Chi2MeasurementEstimator_cfi.Chi2
 
 from RecoLocalTracker.SiStripClusterizer.SiStripClusterChargeCut_cfi import SiStripClusterChargeCutNone
 
-from RecoParticleFlow.HGCTracking.hgcTracks_cfi import *
+from RecoHGCal.HGCTracking.hgcTracks_cfi import *

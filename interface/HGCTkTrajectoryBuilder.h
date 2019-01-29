@@ -1,5 +1,5 @@
-#ifndef RecoparticleFlow_HGCTracking_HGCTkTrajectoryBuilder_h
-#define RecoparticleFlow_HGCTracking_HGCTkTrajectoryBuilder_h
+#ifndef RecoHGCal_HGCTracking_HGCTkTrajectoryBuilder_h
+#define RecoHGCal_HGCTracking_HGCTkTrajectoryBuilder_h
 
 /// Class that does the trajectory building starting from a seed
 
@@ -18,13 +18,13 @@
 #include "TrackingTools/TrajectoryCleaning/interface/TrajectoryCleaner.h"
 #include "TrackingTools/TrajectoryFiltering/interface/TrajectoryFilter.h"
 
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingRecHit.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingClusteringRecHit.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTracker.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingBasicCPE.h"
-#include "RecoParticleFlow/HGCTracking/interface/TrajectoryCleanerBySharedEndpoints.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingData.h"
-#include "RecoParticleFlow/HGCTracking/interface/hgcdebug.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingRecHit.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingClusteringRecHit.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTracker.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingBasicCPE.h"
+#include "RecoHGCal/HGCTracking/interface/TrajectoryCleanerBySharedEndpoints.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingData.h"
+#include "RecoHGCal/HGCTracking/interface/hgcdebug.h"
 
 class HGCTkTrajectoryBuilder {
     public:
@@ -64,7 +64,7 @@ class HGCTkTrajectoryBuilder {
         enum PatternRecoAlgo { SingleHitAlgo, ClusterizingAlgo, MixedAlgo };
 
         // --- Inputs ---
-        const edm::EDGetTokenT<HGCRecHitCollection> srcEE_, srcFH_, srcBH_;
+        const edm::EDGetTokenT<HGCRecHitCollection> srcEE_, srcFH_;  //, srcBH_;
         const edm::EDGetTokenT<reco::CaloClusterCollection> srcClusters_;
 
         // --- Configuration ---
@@ -99,7 +99,7 @@ class HGCTkTrajectoryBuilder {
 
         // --- Event Data ---
         // note that handles have to be kept, since they're needed to build refs
-        edm::Handle<HGCRecHitCollection> srcEE, srcFH, srcBH;
+        edm::Handle<HGCRecHitCollection> srcEE, srcFH; //, srcBH;
         edm::Handle<reco::CaloClusterCollection> srcClusters;
         // data re-arranged for tracking
         std::unique_ptr<HGCTrackingData> data_;

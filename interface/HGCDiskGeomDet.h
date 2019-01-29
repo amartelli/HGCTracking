@@ -1,9 +1,10 @@
-#ifndef RecoParticleFlow_HGCTracking_HGCDiskGeomDet_h
-#define RecoParticleFlow_HGCTracking_HGCDiskGeomDet_h
+#ifndef RecoHGCal_HGCTracking_HGCDiskGeomDet_h
+#define RecoHGCal_HGCTracking_HGCDiskGeomDet_h
 
 /// Class corresponding to one layer of HGC
 
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
+#include "DataFormats/ForwardDetId/interface/HGCSiliconDetId.h"
 #include "DataFormats/ForwardDetId/interface/HGCalDetId.h"
 #include "DataFormats/HcalDetId/interface/HcalDetId.h"
 

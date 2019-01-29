@@ -1,4 +1,4 @@
-#include "RecoParticleFlow/HGCTracking/interface/TrajectoryCleanerBySharedEndpoints.h"
+#include "RecoHGCal/HGCTracking/interface/TrajectoryCleanerBySharedEndpoints.h"
 
 void TrajectoryCleanerBySharedEndpoints::clean(std::vector<Trajectory> &trajs) const 
 { 

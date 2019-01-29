@@ -1,5 +1,5 @@
-#ifndef RecoParticleFlow_HGCTracking_interface_HGCTrackingDiskData_h
-#define RecoParticleFlow_HGCTracking_interface_HGCTrackingDiskData_h
+#ifndef RecoHGCal_HGCTracking_interface_HGCTrackingDiskData_h
+#define RecoHGCal_HGCTracking_interface_HGCTrackingDiskData_h
 
 /// Class that holds the rechits on one HGC Layer, and does the lookup
 //  Almost like a MeasurementDetWithData in the tracker
@@ -8,16 +8,16 @@
 //  note 2: the class is cheap to move, but expensive to copy
 
 
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingRecHit.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingClusteringRecHit.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTracker.h"
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingBasicCPE.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingRecHit.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingClusteringRecHit.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTracker.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingBasicCPE.h"
 
 #include "TrackingTools/DetLayers/interface/MeasurementEstimator.h"
 #include "TrackingTools/TrajectoryState/interface/TrajectoryStateOnSurface.h"
 #include "TrackingTools/PatternTools/interface/TrajectoryMeasurement.h"
 
-#include "RecoParticleFlow/HGCTracking/interface/hgcdebug.h"
+#include "RecoHGCal/HGCTracking/interface/hgcdebug.h"
 
 
 class HGCTrackingDiskData {

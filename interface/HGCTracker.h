@@ -1,12 +1,12 @@
-#ifndef RecoParticleFlow_HGCTracking_HGCTracker_h
-#define RecoParticleFlow_HGCTracking_HGCTracker_h
+#ifndef RecoHGCal_HGCTracking_HGCTracker_h
+#define RecoHGCal_HGCTracking_HGCTracker_h
 
 /// Class holding all the layers of the HGC Tracker
 /// With some more effort it could inherit from TrackingGeometry etc
 // - holds (and owns) all the disks
 // - implements navigation and lookup by id
 
-#include "RecoParticleFlow/HGCTracking/interface/HGCDiskGeomDet.h"
+#include "RecoHGCal/HGCTracking/interface/HGCDiskGeomDet.h"
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "DataFormats/TrajectorySeed/interface/PropagationDirection.h"
 

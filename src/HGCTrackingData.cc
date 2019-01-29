@@ -1,5 +1,5 @@
-#include "RecoParticleFlow/HGCTracking/interface/HGCTrackingData.h"
-#include "RecoParticleFlow/HGCTracking/interface/hgcdebug.h"
+#include "RecoHGCal/HGCTracking/interface/HGCTrackingData.h"
+#include "RecoHGCal/HGCTracking/interface/hgcdebug.h"
 #include <cstdio>
 
 void

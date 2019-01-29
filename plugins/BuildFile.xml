@@ -1,5 +1,5 @@
 <use name="CommonTools/Utils"/>
-<use name="RecoParticleFlow/HGCTracking"/>
-<library   file="*.cc" name="RecoParticleFlowHGCTrackingPlugins">
+<use name="RecoHGCal/HGCTracking"/>
+<library   file="*.cc" name="RecoHGCalHGCTrackingPlugins">
   <flags   EDM_PLUGIN="1"/>
 </library>

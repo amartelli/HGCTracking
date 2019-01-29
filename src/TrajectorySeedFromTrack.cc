@@ -1,1 +1,1 @@
-#include "RecoParticleFlow/HGCTracking/interface/TrajectorySeedFromTrack.h"
+#include "RecoHGCal/HGCTracking/interface/TrajectorySeedFromTrack.h"
