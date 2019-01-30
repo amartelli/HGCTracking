@@ -59,7 +59,7 @@ process.myTICL=cms.Path(process.hgcalLayerClusters
                         + process.hgcalMultiClusters)
 
 process.e = cms.EndPath(process.out)
-process.schedule=cms.Schedule(process.run,process.TICL,process.e)
+process.schedule=cms.Schedule(process.run,process.myTICL,process.e)
 
 
 import sys
