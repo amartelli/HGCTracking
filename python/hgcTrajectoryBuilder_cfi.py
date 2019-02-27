@@ -8,6 +8,9 @@ hgcTrajectoryBuilderPSet = cms.PSet(
     ### Clusters
     srcClusters = cms.InputTag("hgcalLayerClusters"),
 
+    ##single hit SoN threshold
+    singleHitSoNthreshold = cms.double(3.0),
+
     ### Seeding
     # initial uncertainties are rescaled by ( 1 + x * N(lost outer hits) )
     lostHitRescaleErrorFactor = cms.double(0.3), 

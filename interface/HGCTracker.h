@@ -10,6 +10,9 @@
 #include "Geometry/CaloGeometry/interface/CaloGeometry.h"
 #include "DataFormats/TrajectorySeed/interface/PropagationDirection.h"
 
+#include <map>
+#include <string>
+
 class HGCTracker {
     public:
         HGCTracker(const CaloGeometry *geom) ;
@@ -38,7 +41,17 @@ class HGCTracker {
         const CaloGeometry *geom_;
         std::vector<HGCDiskGeomDet *> disksPos_, disksNeg_;
 
-        void makeDisks(int subdet, int disks) ;
+	void computeAbsorbers();
+	float combinedEdX(float w1, float a, float w2, float b){
+	  return (w1 * a + w2 * b);
+	}
+	float combineX0(float w1, float a, float w2, float b){
+	  float oneOver = (w1 / a + w2 /b);
+	  return 1./oneOver;
+	}
+	std::map<std::string, float> xi_;
+
+	void makeDisks(int subdet, int disks) ;
         void addDisk(HGCDiskGeomDet *disk) { 
             (disk->zside() > 0 ? disksPos_ : disksNeg_).push_back(disk);
         }

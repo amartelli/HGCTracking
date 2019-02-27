@@ -3,10 +3,6 @@
 
 namespace {
            struct HGCBySideAndLayer {
-        //     bool operator()(const HGCRecHit &hit1, const HGCRecHit &hit2) const { return comp(HGCalDetId(hit1.id()), HGCalDetId(hit2.id())); }
-        //     bool operator()(HGCalDetId id1, const HGCRecHit &hit2) const { return comp(id1, HGCalDetId(hit2.id())); }
-        //     bool operator()(const HGCRecHit &hit1, HGCalDetId id2) const { return comp(HGCalDetId(hit1.id()),id2); }
-        //     bool comp(HGCalDetId id1, HGCalDetId id2) const {
 	       bool operator()(const HGCRecHit &hit1, const HGCRecHit &hit2) const {
 	         return comp(HGCSiliconDetId(hit1.id()), HGCSiliconDetId(hit2.id())); }
 	       bool operator()(HGCSiliconDetId id1, const HGCRecHit &hit2) const { return comp(id1, HGCSiliconDetId(hit2.id())); }
@@ -21,25 +17,36 @@ namespace {
 
 }
 
-HGCTrackingDiskData::HGCTrackingDiskData(const edm::Handle<HGCTrackingDiskData::TColl> &data, int subdet, int zside, int layer, const HGCTrackingBasicCPE *cpe) :
+HGCTrackingDiskData::HGCTrackingDiskData(const edm::Handle<HGCTrackingDiskData::TColl> &data, int subdet, int zside, int layer, const HGCTrackingBasicCPE *cpe, float thrSoN) :
     alldata_(&data), 
-    cpe_(cpe),truthMap_(0)
+    cpe_(cpe),truthMap_(0),singleHitSoNthreshold_(thrSoN)
 {
     index_.clear();
-    //if (subdet <= 4) {
-    //auto range = std::equal_range(data->begin(), data->end(), HGCalDetId(ForwardSubdetector(subdet),zside,layer,0,0,0), HGCBySideAndLayer());
     auto range = std::equal_range(data->begin(), data->end(), HGCSiliconDetId(DetId::Detector(subdet), zside, 0, layer, 0, 0, 0, 0), HGCBySideAndLayer());
     for (const_iterator it = range.first; it < range.second; ++it) {
+      if(it->signalOverSigmaNoise() < singleHitSoNthreshold_) continue;
       index_.emplace_back(cpe_->hint(*it), it);
     }
-    // } else {
-    //     for (const_iterator it = data->begin(), ed = data->end(); it != ed; ++it) {
-    //         HcalDetId hcalid(it->id());
-    //         if (zside == hcalid.zside() && layer == hcalid.depth()) {
-    //             index_.emplace_back(cpe_->hint(*it), it);
-    //         }
-    //     }
-    // }
+
+    /*
+    for (const_iterator it = data->begin(), ed = data->end(); it != ed; ++it) {
+      int ly = 99;
+      int zS = 99;
+      //FIX hardcoded threshold 5 => for MIPs might need to go lower
+      if(it->signalOverSigmaNoise() < 5.) continue;
+      if(it->id().det() == 8 || it->id().det() == 9){
+	ly = HGCSiliconDetId(it->id()).layer(); zS = HGCSiliconDetId(it->id()).zside();
+      }
+      else if (it->id().det() == 10){
+	ly = HGCScintillatorDetId(it->id()).layer(); zS = HGCScintillatorDetId(it->id()).zside();
+      }
+      if (zside == zS && layer == ly) {
+	index_.emplace_back(cpe_->hint(*it), it);
+	//std::cout << " Adding hit position = " << cpe_->getPosition(*it)  << " = " <<  cpe_->getPosition(it->id()) << " layer = " << layer << " subdet = " << subdet << " zside = " << zside << std::endl;
+      }
+    }
+    */
+
     buildIndex_();
 }
 
@@ -49,20 +56,21 @@ void HGCTrackingDiskData::addClusters(const edm::Handle<reco::CaloClusterCollect
     clusterIndex_.clear();
     for (reco::CaloClusterCollection::const_iterator it = data->begin(), ed = data->end(); it != ed; ++it) {
         DetId firstid = it->hitsAndFractions().front().first;
-	// if (firstid.det() == DetId::Forward) {
+
 	if (firstid.det() == DetId::HGCalHSc) continue;
-	if (firstid.subdetId() != subdet) continue;
-	HGCalDetId parsed(firstid);
-	if (parsed.zside() != zside || parsed.layer() != layer) {
-	  continue;
+	if (firstid.det() != subdet) continue;
+	int layerF = 99;
+	int zSideF = 99;
+	if(firstid.det() == DetId::HGCalEE || firstid.det() == DetId::HGCalHSi){
+	  layerF = HGCSiliconDetId(firstid).layer();
+	  zSideF = HGCSiliconDetId(firstid).zside();
 	}
-        // } else if (firstid.det() == DetId::Hcal) {
-        //     if (subdet != 5) continue;
-        //     HcalDetId parsed(firstid);
-        //     if (parsed.zside() != zside || parsed.depth() != layer) {
-        //         continue;
-        //     }
-        // }
+	else if(firstid.det() == DetId::HGCalHSc){
+	  layerF = HGCScintillatorDetId(firstid).layer();
+	  zSideF = HGCScintillatorDetId(firstid).zside();
+	}
+	if (zSideF != zside || layerF != layer) continue;
+
         clusterIndex_.emplace_back(cpe_->hint(*it), it);
     }
 }

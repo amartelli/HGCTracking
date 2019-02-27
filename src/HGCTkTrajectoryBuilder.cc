@@ -36,6 +36,7 @@ HGCTkTrajectoryBuilder::HGCTkTrajectoryBuilder(const edm::ParameterSet& ps, edm:
     estimatorName_(ps.getParameter<std::string>("estimator")),
     updatorName_(ps.getParameter<std::string>("updator")),
     trajectoryCleanerName_(ps.getParameter<std::string>("trajectoryCleaner")),
+    thrSoN_(ps.getParameter<double>("singleHitSoNthreshold")),
     lostHitRescaleErrorFactor_(ps.getParameter<double>("lostHitRescaleErrorFactor")),
     fastCleaner_(ps.getParameter<bool>("fastCleaner")), 
     endpointCleaner_(ps.getParameter<bool>("endpointCleaner")), 
@@ -90,8 +91,8 @@ HGCTkTrajectoryBuilder::init(const edm::Event& evt, const edm::EventSetup& es)
 
     data_.reset(new HGCTrackingData(*hgcTracker_, &*cpe_));
 
-    evt.getByToken(srcEE_, srcEE); data_->addData(srcEE, 8);
-    evt.getByToken(srcFH_, srcFH); data_->addData(srcFH, 9);
+    evt.getByToken(srcEE_, srcEE); data_->addData(srcEE, 8, thrSoN_);
+    evt.getByToken(srcFH_, srcFH); data_->addData(srcFH, 9, thrSoN_);
     //evt.getByToken(srcBH_, srcBH); data_->addData(srcBH, 10);
 
     evt.getByToken(srcClusters_, srcClusters); 
@@ -318,7 +319,9 @@ HGCTkTrajectoryBuilder::advanceOneLayer(const Start &start, const TempTrajectory
             return ret;
         }
     }
-    auto missing = (disk->subdet() != 10 || lostHitsOnBH_) ? TrackingRecHit::missing : TrackingRecHit::inactive;
+
+    //if subdet == 9 and layer > 12 is in last 12 layers = ex BH
+    auto missing = (disk->subdet() == 8 || disk->layer() < 13 || lostHitsOnBH_) ? TrackingRecHit::missing : TrackingRecHit::inactive;
     ret.push_back(traj.foundHits() ? traj : TempTrajectory(traj.direction(),0)); // either just one lost hit, or a trajectory not starting on a lost hit
     ret.back().push(TrajectoryMeasurement(tsos, std::make_shared<InvalidTrackingRecHit>(*disk, missing)));
     return ret;

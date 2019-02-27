@@ -5,8 +5,7 @@
 
 #include "Geometry/CommonDetUnit/interface/GeomDet.h"
 #include "DataFormats/ForwardDetId/interface/HGCSiliconDetId.h"
-#include "DataFormats/ForwardDetId/interface/HGCalDetId.h"
-#include "DataFormats/HcalDetId/interface/HcalDetId.h"
+#include "DataFormats/ForwardDetId/interface/HGCScintillatorDetId.h"
 
 class HGCDiskGeomDet : public GeomDet {
     public:

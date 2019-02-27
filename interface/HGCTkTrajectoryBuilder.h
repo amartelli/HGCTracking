@@ -74,6 +74,7 @@ class HGCTkTrajectoryBuilder {
         const std::string updatorName_;
         const std::string trajectoryCleanerName_;
 
+	const double thrSoN_;
         const double lostHitRescaleErrorFactor_;
         const bool fastCleaner_, endpointCleaner_;
         const unsigned int theMaxCand;

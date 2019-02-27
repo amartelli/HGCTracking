@@ -3,21 +3,21 @@
 #include <cstdio>
 
 void
-HGCTrackingData::addData(const edm::Handle<HGCTrackingData::TColl> &data, int subdet) 
+HGCTrackingData::addData(const edm::Handle<HGCTrackingData::TColl> &data, int subdet, float thrSoN_)
 {
     if (hgctracking::g_debuglevel > 0) printf("Adding data for subdet %d, %lu total hits\n", subdet, data->size());
     for (int zside = -1; zside <= +1; zside += 2) {
         for (unsigned int idisk = 0, ndisk = tracker_->numberOfDisks(zside); idisk < ndisk; ++idisk) {
             const  HGCDiskGeomDet *disk = tracker_->disk(zside, idisk);
             if (disk->subdet() != subdet) continue;
-            data_[disk] = Disk(data, subdet, zside, disk->layer(), cpe_);
+            data_[disk] = Disk(data, subdet, zside, disk->layer(), cpe_, thrSoN_);
             //printf("Added DiskData @%p for %1d/%+1d/%2d with %u hits\n", disk, subdet, zside, disk->layer(), data_[disk].size());
         }
     }
 }
 
 void
-HGCTrackingData::addClusters(const edm::Handle<reco::CaloClusterCollection> &data) 
+HGCTrackingData::addClusters(const edm::Handle<reco::CaloClusterCollection> &data)
 {
     if (hgctracking::g_debuglevel > 0) printf("Adding clusters, %lu total\n", data->size());
     for (int zside = -1; zside <= +1; zside += 2) {

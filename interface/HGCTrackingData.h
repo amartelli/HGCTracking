@@ -17,7 +17,7 @@ class HGCTrackingData {
         typedef Disk::TColl TColl;
 
         HGCTrackingData(const HGCTracker &tracker, const HGCTrackingBasicCPE *cpe) : tracker_(&tracker), cpe_(cpe) {}
-        void addData(const edm::Handle<TColl> &data, int subdet) ;
+        void addData(const edm::Handle<TColl> &data, int subdet, float thrSoN=1.) ;
         void addClusters(const edm::Handle<reco::CaloClusterCollection> &data) ;
         const Disk & diskData(const HGCDiskGeomDet *disk) const { 
             auto it = data_.find(disk);

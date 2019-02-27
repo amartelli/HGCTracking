@@ -31,7 +31,7 @@ class HGCTrackingDiskData {
         typedef HGCTrackingClusteringRecHit rechitcluster_type;
 
         HGCTrackingDiskData() {}
-        HGCTrackingDiskData(const edm::Handle<TColl> &data, int subdet, int zside, int layer, const HGCTrackingBasicCPE *cpe) ;
+        HGCTrackingDiskData(const edm::Handle<TColl> &data, int subdet, int zside, int layer, const HGCTrackingBasicCPE *cpe, float thrSoN_=1.) ;
 
         void addClusters(const edm::Handle<reco::CaloClusterCollection> &data, int subdet, int zside, int layer) ;
 
@@ -56,6 +56,8 @@ class HGCTrackingDiskData {
 
         // for debugging
         mutable const CaloTruthRevMap *truthMap_;
+
+	float singleHitSoNthreshold_ ;
 
         void buildIndex_() {
             // could do some sorting here

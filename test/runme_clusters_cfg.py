@@ -19,7 +19,9 @@ process.options = cms.untracked.PSet(wantSummary = cms.untracked.bool(True))
 # Input source
 process.source = cms.Source("PoolSource",
     #fileNames = cms.untracked.vstring('/store/cmst3/user/gpetrucc/l1phase2/081116/DR_PU0/2023D3_guns/ChargedPionGun_PU0_job1.FEVT.root'),
-    fileNames = cms.untracked.vstring('file:/eos/cms/store/group/dpg_hgcal/comm_hgcal/amartell/TICLtests/RECO_211Pt10VtxNoSmear.root'),
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/group/dpg_hgcal/comm_hgcal/amartell/TICLtests/RECO_211Pt10VtxNoSmear.root'),
+    fileNames = cms.untracked.vstring('file:/eos/cms/store/group/dpg_hgcal/comm_hgcal/amartell/TICLtests/origin/RECO_211Pt10VtxNoSmear.root'),
+    #fileNames = cms.untracked.vstring('file:/eos/cms/store/group/dpg_hgcal/comm_hgcal/amartell/HGCAL_Timing_vtxStudies/RECO_211Pt10VtxHLLHC_LowEta/RECO_211Pt10VtxHLLHC_LowEta_10.root'),
     secondaryFileNames = cms.untracked.vstring()
 )
 

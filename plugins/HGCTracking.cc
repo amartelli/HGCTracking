@@ -96,7 +96,6 @@ HGCTracking::produce(edm::Event& evt, const edm::EventSetup& es)
                 //printf("    simcluster pt %7.1f eta %+5.2f phi %+5.2f rechits %4d simhits %d \n",
                 //    scr->pt(), scr->eta(), scr->phi(), scr->numberOfRecHits(), scr->numberOfSimHits());
                 for (const auto & pair : scr->hits_and_fractions()) {
-		    if(HGCalDetId(pair.first).det() == 10) continue;
 		    revTruthMap_.emplace(pair.first, std::make_pair(&p, pair.second));
                 }
             }
@@ -112,7 +111,7 @@ HGCTracking::produce(edm::Event& evt, const edm::EventSetup& es)
         //evt.getByToken(srcBH_, srcBH); 
         writeAllHitsByLayer(*srcEE, evt, "EE", 28);
         writeAllHitsByLayer(*srcFH, evt, "FH", 24);
-        //writeAllHitsByLayer(*srcBH, evt, "BH", 12);
+        //writeAllHitsByLayer(*srcBH, evt, "BH", 24);
     }
 
     // Get tracks
@@ -263,13 +262,13 @@ void HGCTracking::makeOutput(const std::vector<Trajectory> &trajs, edm::Event &o
             //     layer = HcalDetId(tm.recHit()->geographicalId()).depth();
             // }
 	    int subdet = tm.recHit()->geographicalId().det();
-	    int layer = HGCalDetId(tm.recHit()->geographicalId()).layer();
+	    int layer = 0;
 
             // convert subdet to something representable in a hitpattern
             switch (subdet) {
-                case 8: subdet = PixelSubdetector::PixelEndcap; break;
-                case 9: subdet = StripSubdetector::TID; break;
-                case 10: subdet = StripSubdetector::TEC; break;
+	    case 8: subdet = PixelSubdetector::PixelEndcap; layer = HGCSiliconDetId(tm.recHit()->geographicalId()).layer(); break;
+	    case 9: subdet = StripSubdetector::TID; layer = HGCSiliconDetId(tm.recHit()->geographicalId()).layer(); break;
+	    case 10: subdet = StripSubdetector::TEC; layer = HGCScintillatorDetId(tm.recHit()->geographicalId()).layer(); break;
             }
             trk.appendTrackerHitPattern(subdet, layer/2, layer%2, tm.recHit()->type());
         }
@@ -301,13 +300,7 @@ void HGCTracking::writeAllHitsByLayer(const HGCRecHitCollection &hits, edm::Even
 
     for (const HGCRecHit &hit : hits) {
         int zside, layer;
-        // if (hit.id().det() == DetId::Forward) {
-        //     HGCalDetId parsed(hit.id());
-        //     zside = parsed.zside(); layer = parsed.layer();
-        // } else {
-        //     HcalDetId parsed(hit.id());
-        //     zside = parsed.zside(); layer = parsed.depth();
-        // }
+
 	if (hit.id().det() == DetId::HGCalEE){
 	  layer = HGCSiliconDetId(hit.id()).layer();
 	  zside = HGCSiliconDetId(hit.id()).zside();
