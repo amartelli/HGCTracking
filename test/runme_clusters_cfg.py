@@ -47,7 +47,22 @@ process.out = cms.OutputModule("PoolOutputModule",
         "keep *_hgcTracks_*_*",
     ),
 )
+
+#add TICL
+from RecoHGCal.TICL.ticl_iterations import *
+TICL_iterations(process,outputCommands=process.out.outputCommands)
+process.myTICL=cms.Path(process.hgcalLayerClusters
+                        + process.FilteredLayerClustersMIP
+                        + process.TrackstersMIP
+                        + process.TrackstersToMultiClusterMIP
+                        + process.FilteredLayerClusters
+                        + process.Tracksters
+                        + process.TrackstersToMultiCluster
+                        + process.hgcalMultiClusters)
+
 process.e = cms.EndPath(process.out)
+process.schedule=cms.Schedule(process.run,process.myTICL,process.e)
+
 
 import sys
 args = sys.argv[2:] if sys.argv[0] == "cmsRun" else sys.argv[1:]
